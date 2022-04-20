@@ -3,7 +3,7 @@
 #   * Rearrange models' order
 #   * Make sure each model has one field with primary_key=True
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
+#   * Remove `managed = True` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 
@@ -14,7 +14,7 @@ class PredictionMethod(models.Model):
     parameters = models.CharField(max_length=255)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'prediction_method'
 
 
@@ -25,18 +25,18 @@ class Species(models.Model):
     taxon_id = models.IntegerField(unique=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'species'
 
 
 class EnsemblGene(models.Model):
     ensembl_gene_id = models.AutoField(primary_key=True)
-    species_id = models.ForeignKey('Species', models.DO_NOTHING)
+    species_id = models.ForeignKey('Species', on_delete=models.DO_NOTHING)
     ensembl_stable_id = models.CharField(max_length=255, blank=True, null=True)
     import_time_stamp = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'ensembl_gene'
 
 
@@ -46,7 +46,7 @@ class SourceDb(models.Model):
     external_db = models.CharField(max_length=255)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'source_db'
 
 
@@ -56,7 +56,7 @@ class MetaKey(models.Model):
     description = models.CharField(unique=True, max_length=255)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'meta_key'
 
 
@@ -66,7 +66,7 @@ class Ontology(models.Model):
     description = models.CharField(unique=True, max_length=255)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'ontology'
 
 
@@ -77,7 +77,7 @@ class OntologyTerm(models.Model):
     description = models.CharField(unique=True, max_length=255)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'ontology_term'
 
 
@@ -94,7 +94,7 @@ class CuratedInteractor(models.Model):
     ensembl_gene = models.ForeignKey('EnsemblGene', models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'curated_interactor'
 
 
@@ -110,7 +110,7 @@ class PredictedInteractor(models.Model):
     ensembl_gene = models.ForeignKey(EnsemblGene, models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'predicted_interactor'
 
 
@@ -123,7 +123,7 @@ class Interaction(models.Model):
     import_timestamp = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'interaction'
         unique_together = (('interactor_1', 'interactor_2', 'doi', 'source_db'),)
 
@@ -136,7 +136,7 @@ class KeyValuePair(models.Model):
     ontology_term = models.ForeignKey('OntologyTerm', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'key_value_pair'
         unique_together = (('interaction', 'meta_key', 'value'),)
 
