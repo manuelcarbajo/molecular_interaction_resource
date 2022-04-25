@@ -1,2 +1,2 @@
-# molecular_interaction_ressouce
+# molecular_interaction_resource
 Cross species Molecular interactions project. Mapping pipeline
