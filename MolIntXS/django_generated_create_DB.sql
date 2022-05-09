@@ -1,24 +1,17 @@
+#This file has been generated with the command:
+#      python manage.py sqlmigrate home 0001_initial > django_generated_create_DB.sql
 --
 -- Create model CuratedInteractor
 --
-CREATE TABLE `curated_interactor` (`curated_interactor_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY
- `interactor_type` varchar(9) NOT NULL
- `curies` varchar(255) NULL UNIQUE
- `name` varchar(255) NULL
- `molecular_structure` varchar(10000) NULL
- `import_timestamp` datetime(6) NOT NULL);
+CREATE TABLE `curated_interactor` (`curated_interactor_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY, `interactor_type` varchar(9) NOT NULL, `curies` varchar(255) NULL UNIQUE, `name` varchar(255) NULL, `molecular_structure` varchar(10000) NULL, `import_timestamp` datetime(6) NOT NULL);
 --
 -- Create model EnsemblGene
 --
-CREATE TABLE `ensembl_gene` (`ensembl_gene_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY
- `ensembl_stable_id` varchar(255) NULL
- `import_timestamp` datetime(6) NOT NULL);
+CREATE TABLE `ensembl_gene` (`ensembl_gene_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY, `ensembl_stable_id` varchar(255) NULL, `import_timestamp` datetime(6) NOT NULL);
 --
 -- Create model MetaKey
 --
-CREATE TABLE `meta_key` (`meta_key_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY
- `name` varchar(255) NOT NULL UNIQUE
-  `description` varchar(255) NOT NULL UNIQUE);
+CREATE TABLE `meta_key` (`meta_key_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY, `name` varchar(255) NOT NULL UNIQUE, `description` varchar(255) NOT NULL UNIQUE);
 --
 -- Create model Ontology
 --
@@ -38,7 +31,7 @@ CREATE TABLE `species` (`species_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY
 --
 -- Create model PredictedInteractor
 --
-CREATE TABLE `predicted_interactor` (`predicted_interaction_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY, `interactor_type` varchar(9) NOT NULL, `curies` varchar(255) NULL, `name` varchar(255) NOT NULL, `molecular_structure` varchar(10000) NULL, `predicted_timestamp` datetime(6) NOT NULL, `curated_interactor_id` integer NOT NULL, `ensembl_gene_id` integer NOT NULL, `prediction_method_id` integer NOT NULL);
+CREATE TABLE `predicted_interactor` (`predicted_interaction_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY, `interactor_type` varchar(9) NOT NULL, `curies` varchar(255) NULL, `name` varchar(255) NOT NULL, `molecular_structure` varchar(10000) NULL, `predicted_timestamp` datetime(6) NOT NULL, `curated_interactor_id` integer NOT NULL, `ensembl_gene_id` integer NULL, `prediction_method_id` integer NOT NULL);
 --
 -- Create model OntologyTerm
 --
@@ -54,7 +47,7 @@ ALTER TABLE `ensembl_gene` ADD COLUMN `species_id` integer NOT NULL , ADD CONSTR
 --
 -- Add field ensembl_gene to curatedinteractor
 --
-ALTER TABLE `curated_interactor` ADD COLUMN `ensembl_gene_id` integer NOT NULL , ADD CONSTRAINT `curated_interactor_ensembl_gene_id_759a37da_fk_ensembl_g` FOREIGN KEY (`ensembl_gene_id`) REFERENCES `ensembl_gene`(`ensembl_gene_id`);
+ALTER TABLE `curated_interactor` ADD COLUMN `ensembl_gene_id` integer NULL , ADD CONSTRAINT `curated_interactor_ensembl_gene_id_759a37da_fk_ensembl_g` FOREIGN KEY (`ensembl_gene_id`) REFERENCES `ensembl_gene`(`ensembl_gene_id`);
 --
 -- Create model KeyValuePair
 --

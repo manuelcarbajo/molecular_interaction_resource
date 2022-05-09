@@ -8,6 +8,7 @@
 from django.db import models
 
 
+
 class PredictionMethod(models.Model):
     prediction_method_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
@@ -24,6 +25,10 @@ class Species(models.Model):
     production_name = models.CharField(max_length=255)
     taxon_id = models.IntegerField(unique=True)
 
+    def __str__(self):
+        return 'id: {}, division: {}, prod_name: {}, taxon_id: {}'.format(self.species_id,self.ensembl_division,self.production_name,self.taxon_id)
+        #return ('species:', str(self.species_id), '; division:', self.ensembl_division, '; prod_name:',self.production_name, '; taxon_id:', str(self.taxon_id))
+
     class Meta:
         managed = True
         db_table = 'species'
@@ -33,7 +38,7 @@ class EnsemblGene(models.Model):
     ensembl_gene_id = models.AutoField(primary_key=True)
     species = models.ForeignKey('Species', on_delete=models.DO_NOTHING)
     ensembl_stable_id = models.CharField(max_length=255, blank=True, null=True)
-    import_time_stamp = models.DateTimeField()
+    import_timestamp = models.DateTimeField()
 
     class Meta:
         managed = True
@@ -91,7 +96,7 @@ class CuratedInteractor(models.Model):
     name = models.CharField(max_length=255, blank=True, null=True)
     molecular_structure = models.CharField(max_length=10000, blank=True, null=True)
     import_timestamp = models.DateTimeField()
-    ensembl_gene = models.ForeignKey('EnsemblGene', models.DO_NOTHING)
+    ensembl_gene = models.ForeignKey('EnsemblGene', models.DO_NOTHING, null=True)
 
     class Meta:
         managed = True
@@ -107,7 +112,7 @@ class PredictedInteractor(models.Model):
     name = models.CharField(max_length=255)
     molecular_structure = models.CharField(max_length=10000, blank=True, null=True)
     predicted_timestamp = models.DateTimeField()
-    ensembl_gene = models.ForeignKey(EnsemblGene, models.DO_NOTHING)
+    ensembl_gene = models.ForeignKey(EnsemblGene, models.DO_NOTHING, null=True)
 
     class Meta:
         managed = True
