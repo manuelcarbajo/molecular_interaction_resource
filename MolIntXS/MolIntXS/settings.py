@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,11 +79,11 @@ WSGI_APPLICATION = 'MolIntXS.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'MolIntXS_11_Apr',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '3360',
+        'NAME': os.getenv('MolIntXS_DBNAME'),
+        'USER': os.getenv('MolIntXS_msql_USER'),
+        'PASSWORD': os.getenv('MYSQL_MolIntXS_pwd'),
+        'HOST': os.getenv('MolIntXS_msql_HOST'),
+        'PORT': os.getenv('MolIntXS_msql_USER'),
     }
 }
 
