@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.db.models import Q
 
 from rest_framework.mixins import (
     CreateModelMixin, ListModelMixin, RetrieveModelMixin, UpdateModelMixin
@@ -25,14 +26,19 @@ def species_id(request, species_id):
     return HttpResponse(json_species)
 
 def species(request):
-    species_list = ()
-    species_item = ''
-    msg = ""
-
     species_list = DBtables.Species.objects.all()
     json_species = serialize('jsonl', species_list, cls=LazyEncoder) 
     
     return HttpResponse(json_species)
+
+
+def prodname_ensgene(request, ens_gene, prod_name):
+    #get list of interactions havig interactor1 or interactor2 corresponding to the given ens_gene and prod_name
+    interactors_list = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_gene) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_gene)).filter(Q(interactor_1__ensembl_gene_id__species_id__production_name__contains=prod_name) | Q(interactor_2__ensembl_gene_id__species_id__production_name__contains=prod_name))
+    curated_interactor_list = DBtables.CuratedInteractor.objects.filter(curated_interactor_id__in=interactors_list)
+    json_curated_interactors = serialize('jsonl', curated_interactor_list, cls=LazyEncoder) 
+    return HttpResponse(json_curated_interactors)
+
 
 def ensembl_gene(request):
     return HttpResponse("Welcome! You're at the ensembl_gene response page.")
