@@ -8,7 +8,7 @@ from rest_framework.mixins import (
 from rest_framework.viewsets import GenericViewSet
 import home.models as DBtables
 from .models import Species
-from home.serializers import SpeciesSerializer
+from home.serializers import SpeciesSerializer, InteractionSerializer
 from django.core.serializers import serialize
 from .serializers import LazyEncoder
 
@@ -31,13 +31,18 @@ def species(request):
     
     return HttpResponse(json_species)
 
+class InteractionsForEnsgeneProdnameViewSet(
+    GenericViewSet,  # generic view functionality
+    RetrieveModelMixin,  # handles GETs for 1 Species
+    ListModelMixin):  # handles GETs for many Species
 
-def prodname_ensgene(request, ens_gene, prod_name):
-    #get list of interactions havig interactor1 or interactor2 corresponding to the given ens_gene and prod_name
-    interactors_list = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_gene) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_gene)).filter(Q(interactor_1__ensembl_gene_id__species_id__production_name__contains=prod_name) | Q(interactor_2__ensembl_gene_id__species_id__production_name__contains=prod_name))
-    curated_interactor_list = DBtables.CuratedInteractor.objects.filter(curated_interactor_id__in=interactors_list)
-    json_curated_interactors = serialize('jsonl', curated_interactor_list, cls=LazyEncoder) 
-    return HttpResponse(json_curated_interactors)
+    serializer_class = InteractionSerializer
+
+    def get_queryset(self):
+        ens_gene = self.kwargs['ens_gene']
+        prod_name = self.kwargs['prod_name']
+        return DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_gene) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_gene)).filter(Q(interactor_1__ensembl_gene_id__species_id__production_name__contains=prod_name) | Q(interactor_2__ensembl_gene_id__species_id__production_name__contains=prod_name))
+
 
 
 def ensembl_gene(request):

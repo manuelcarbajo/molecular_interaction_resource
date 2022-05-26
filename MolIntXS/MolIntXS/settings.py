@@ -75,17 +75,17 @@ WSGI_APPLICATION = 'MolIntXS.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('MolIntXS_DBNAME'),
         'USER': os.getenv('MolIntXS_msql_USER'),
-        'PASSWORD': os.getenv('MYSQL_MolIntXS_pwd'),
+        'PASSWORD': os.getenv('MolIntXS_msql_PASSWORD'),
         'HOST': os.getenv('MolIntXS_msql_HOST'),
-        'PORT': os.getenv('MolIntXS_msql_USER'),
+        'PORT': os.getenv('MolIntXS_msql_PORT'),
     }
 }
+
 
 
 # Password validation
