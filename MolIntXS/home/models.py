@@ -47,7 +47,7 @@ class EnsemblGene(models.Model):
 
 class SourceDb(models.Model):
     source_db_id = models.AutoField(primary_key=True)
-    label = models.CharField(max_length=255)
+    label = models.CharField(unique=True, max_length=255)
     external_db = models.CharField(max_length=255)
 
     class Meta:

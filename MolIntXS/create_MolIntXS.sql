@@ -73,7 +73,7 @@ CREATE TABLE `ontology` (
 
 CREATE TABLE `source_db` (
 	`source_db_id` INT NOT NULL AUTO_INCREMENT,
-	`label` varchar(255) NOT NULL,
+	`label` varchar(255) NOT NULL UNIQUE,
 	`external_db` VARCHAR(255) NOT NULL,
 	PRIMARY KEY (`source_db_id`)
 );
