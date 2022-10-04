@@ -2,9 +2,12 @@ from rest_framework import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 import home.models as DBtables 
 
+
 class LazyEncoder(DjangoJSONEncoder):
     def default(self, obj):
-        if isinstance(obj, Species):
+        if isinstance(obj, DBtables.Species):
+            return str(obj)
+        if isinstance(obj, DBtables.EnsemblGene):
             return str(obj)
         return super().default(obj)
 
@@ -48,6 +51,31 @@ class SpeciesSerializer(serializers.Serializer):
         instance.ensembl_division = validated_data.get('ensembl_division', instance.ensembl_division)
         instance.production_name = validated_data.get('production_name', instance.production_name)
         instance.taxon_id = validated_data.get('taxon_id', instance.taxon_id)
+    
+        instance.save()
+        return instance
+
+
+class EnsemblGeneSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    species_id = serializers.IntegerField(read_only=True)
+    ensembl_stable_id = serializers.CharField(style={'base_template': 'textarea.html'})
+    import_timestamp = serializers.DateTimeField()
+
+
+    def create(self, validated_data):
+        """
+        Create and return a new `EnsemblGene` instance, given the validated data.
+        """
+        return EnsemblGene.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        """
+        Update and return an existing `EnsemblGene` instance, given the validated data.
+        """
+        instance.species_id = validated_data.get('species_id', instance.species_id)
+        instance.ensembl_stable_id = validated_data.get('ensembl_stable_id', instance.ensembl_stable_id)
+        instance.import_timestamp = validated_data.get('import_timestamp', instance.import_timestamp)
     
         instance.save()
         return instance
