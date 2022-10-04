@@ -13,6 +13,8 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('species_id/<int:species_id>/', views.species_id, name='species_id'),
     path('species/', views.species, name='species'),
+    path('ensembl_gene/', views.ensembl_gene, name='ensembl_gene'),
+    path('interactions_by_prodname/', views.interactions_by_prodname, name='interactions_by_prodname'),
     #path('prodname_ensgene/<ens_gene>/<prod_name>/', views.InteractionsForEnsgeneProdnameViewSet.as_view(), name='prodname_ensgene'),
     re_path(r'^ensweb/', include((router.urls, 'ensweb'), namespace='ensweb')),
 ]
