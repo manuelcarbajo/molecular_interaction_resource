@@ -11,6 +11,7 @@ from .models import Species, EnsemblGene
 from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
 from django.core.serializers import serialize
 from .serializers import LazyEncoder
+import json
 
 # Create your views here.
 def index(request):
@@ -50,7 +51,8 @@ def interactions_by_prodname(request):
         if genes_per_specie_List:
             species_dict = {sp.production_name:genes_per_specie_List}
             species_genes_List.append(species_dict)
-    return HttpResponse(str(species_genes_List))
+    json_species_genes_list = json.loads(str(species_genes_List).replace("'", '"'))
+    return HttpResponse(json_species_genes_list)
         
     
 class InteractionsForEnsgeneProdnameViewSet(
