@@ -54,7 +54,40 @@ def interactions_by_prodname(request):
     json_species_genes_list = json.loads(str(species_genes_List).replace("'", '"'))
     return HttpResponse(json_species_genes_list)
         
-    
+def display_by_gene(request,ens_stbl_id):
+    InteractionsByGene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id))
+    InteractionsByGeneList = []
+    for intrctn in InteractionsByGene:
+        interactor1_type = intrctn.interactor_1.interactor_type
+        species1_name = intrctn.interactor_1.ensembl_gene.species.production_name 
+        identifier1 = intrctn.interactor_1.curies
+        ens_stbl_id_1 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id
+        
+        interactor1_dict = {"Species": species1_name,"Gene": ens_stbl_id_1,"Interactor":interactor1_type,"Identifier": identifier1}
+        
+        interactor2_type = intrctn.interactor_2.interactor_type
+        identifier2 = intrctn.interactor_2.curies
+        source_db = intrctn.source_db.label
+        if interactor2_type == 'synthetic':
+            interactor2_name = intrctn.interactor_2.name
+            interactor2_dict = {"Other": interactor2_name,"Interactor": interactor2_type,"Identifier":identifier2,"Source DB": source_db}
+        else:
+            species2_name = intrctn.interactor_2.ensembl_gene.species.production_name 
+            ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id
+            interactor2_dict = {"Species": species2_name,"Gene": ens_stbl_id_2,"Interactor":interactor2_type,"Identifier": identifier2,"Source DB": source_db}
+        
+        MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=intrctn.interaction_id)
+        metadata_dict = {}
+        for mo in MetadataByInteraction:
+            metadata_dict[mo.meta_key.name] = mo.value
+        
+
+        interactionDict = {"interactor_1":interactor1_dict, "interactor_2":interactor2_dict, "metadata":metadata_dict}
+        InteractionsByGeneList.append(interactionDict)
+        
+    json_interactions_by_gene_list = json.loads(str(InteractionsByGeneList).replace("'", '"'))
+    return HttpResponse(json_interactions_by_gene_list)
+
 class InteractionsForEnsgeneProdnameViewSet(
     GenericViewSet,  # generic view functionality
     RetrieveModelMixin,  # handles GETs for 1 Species
