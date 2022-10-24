@@ -12,6 +12,8 @@ from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGe
 from django.core.serializers import serialize
 from .serializers import LazyEncoder
 import json
+from json import JSONEncoder
+import numpy as np
 
 # Create your views here.
 def index(request):
@@ -44,14 +46,16 @@ def interactions_by_prodname(request):
     species_dict = {}
     for sp in species:
         sp_id = sp.species_id
-        genes = DBtables.EnsemblGene.objects.filter(Q(curatedinteractor__interaction_for_int1__interactor_2__ensembl_gene__species_id=sp_id) | Q(curatedinteractor__interaction_for_int2__interactor_1__ensembl_gene__species_id=sp_id))
+        genes = DBtables.EnsemblGene.objects.filter(Q(curatedinteractor__interaction_for_int2__interactor_2__ensembl_gene__species_id=sp_id) | Q(curatedinteractor__interaction_for_int1__interactor_1__ensembl_gene__species_id=sp_id))
         genes_per_specie_List = []
         for gene in genes:
-            genes_per_specie_List.append(gene.ensembl_stable_id)
+            if 'UNDETERMINED' not in gene.ensembl_stable_id:
+                genes_per_specie_List.append(gene.ensembl_stable_id)
         if genes_per_specie_List:
-            species_dict = {sp.production_name:genes_per_specie_List}
+            unique_gene_list = list(set(genes_per_specie_List))
+            species_dict = {sp.production_name:unique_gene_list}
             species_genes_List.append(species_dict)
-    json_species_genes_list = json.loads(str(species_genes_List).replace("'", '"'))
+    json_species_genes_list = json.loads(str(species_genes_List).replace("'",'"'))
     return HttpResponse(json_species_genes_list)
         
 def display_by_gene(request,ens_stbl_id):
@@ -63,29 +67,33 @@ def display_by_gene(request,ens_stbl_id):
         identifier1 = intrctn.interactor_1.curies
         ens_stbl_id_1 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id
         
-        interactor1_dict = {"Species": species1_name,"Gene": ens_stbl_id_1,"Interactor":interactor1_type,"Identifier": identifier1}
+        interactor1_dict = {"type":"species","name": species1_name,"gene": ens_stbl_id_1,"interactor":interactor1_type,"identifier": identifier1}
         
         interactor2_type = intrctn.interactor_2.interactor_type
         identifier2 = intrctn.interactor_2.curies
         source_db = intrctn.source_db.label
         if interactor2_type == 'synthetic':
             interactor2_name = intrctn.interactor_2.name
-            interactor2_dict = {"Other": interactor2_name,"Interactor": interactor2_type,"Identifier":identifier2,"Source DB": source_db}
+            interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":identifier2,"source_DB": source_db}
         else:
             species2_name = intrctn.interactor_2.ensembl_gene.species.production_name 
             ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id
-            interactor2_dict = {"Species": species2_name,"Gene": ens_stbl_id_2,"Interactor":interactor2_type,"Identifier": identifier2,"Source DB": source_db}
+            interactor2_dict = {"type":"species", "name": species2_name,"gene": ens_stbl_id_2,"interactor":interactor2_type,"identifier": identifier2,"source_DB": source_db}
         
         MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=intrctn.interaction_id)
-        metadata_dict = {}
-        for mo in MetadataByInteraction:
-            metadata_dict[mo.meta_key.name] = mo.value
+        metadataList = []
         
+        for mo in MetadataByInteraction:
+            metadata_dict = {}
+            metadata_dict["label"] = mo.meta_key.name
+            metadata_dict["value"] = mo.value
+            metadataList.append(metadata_dict)
 
-        interactionDict = {"interactor_1":interactor1_dict, "interactor_2":interactor2_dict, "metadata":metadata_dict}
+        interactionDict = {"interactor_1":interactor1_dict, "interactor_2":interactor2_dict, "metadata":metadataList}
+        
         InteractionsByGeneList.append(interactionDict)
         
-    json_interactions_by_gene_list = json.loads(str(InteractionsByGeneList).replace("'", '"'))
+    json_interactions_by_gene_list = json.dumps(InteractionsByGeneList)
     return HttpResponse(json_interactions_by_gene_list)
 
 class InteractionsForEnsgeneProdnameViewSet(
