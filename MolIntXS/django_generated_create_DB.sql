@@ -23,7 +23,7 @@ CREATE TABLE `prediction_method` (`prediction_method_id` integer AUTO_INCREMENT 
 --
 -- Create model SourceDb
 --
-CREATE TABLE `source_db` (`source_db_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY, `label` varchar(255) NOT NULL, `external_db` varchar(255) NOT NULL);
+CREATE TABLE `source_db` (`source_db_id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY, `label` varchar(255) NOT NULL UNIQUE, `external_db` varchar(255) NOT NULL);
 --
 -- Create model Species
 --
@@ -43,11 +43,11 @@ CREATE TABLE `interaction` (`interaction_id` integer AUTO_INCREMENT NOT NULL PRI
 --
 -- Add field species to ensemblgene
 --
-ALTER TABLE `ensembl_gene` ADD COLUMN `species_id` integer NOT NULL , ADD CONSTRAINT `ensembl_gene_species_id_ed965144_fk_species_species_id` FOREIGN KEY (`species_id`) REFERENCES `species`(`species_id`);
+ALTER TABLE `ensembl_gene` ADD COLUMN `species_id` integer, ADD CONSTRAINT `ensembl_gene_species_id_ed965144_fk_species_species_id` FOREIGN KEY (`species_id`) REFERENCES `species`(`species_id`);
 --
 -- Add field ensembl_gene to curatedinteractor
 --
-ALTER TABLE `curated_interactor` ADD COLUMN `ensembl_gene_id` integer NULL , ADD CONSTRAINT `curated_interactor_ensembl_gene_id_759a37da_fk_ensembl_g` FOREIGN KEY (`ensembl_gene_id`) REFERENCES `ensembl_gene`(`ensembl_gene_id`);
+ALTER TABLE `curated_interactor` ADD COLUMN `ensembl_gene_id` integer, ADD CONSTRAINT `curated_interactor_ensembl_gene_id_759a37da_fk_ensembl_g` FOREIGN KEY (`ensembl_gene_id`) REFERENCES `ensembl_gene`(`ensembl_gene_id`);
 --
 -- Create model KeyValuePair
 --
