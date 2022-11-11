@@ -59,54 +59,69 @@ def interactions_by_prodname(request):
     return HttpResponse(json_species_genes_list)
         
 def display_by_gene(request,ens_stbl_id):
-    InteractionsByGene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id))
-    InteractionsByGeneList = []
-    for intrctn in InteractionsByGene:
-        interactor1_type = intrctn.interactor_1.interactor_type
-        species1_name = intrctn.interactor_1.ensembl_gene.species.production_name 
-        identifier1 = intrctn.interactor_1.curies
-        ens_stbl_id_1 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id
-        
-        interactor1_dict = {"type":"species","name": species1_name,"gene": ens_stbl_id_1,"interactor":interactor1_type,"identifier": identifier1}
-        
+    interactions_by_queried_gene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id))
+    interactions_results_dict = {"interactor_1":{},"interactors_2":[]}
+    interactors2_list = [] 
+
+    for intrctn in interactions_by_queried_gene:
+        if not interactions_results_dict["interactor_1"]:
+            InteractionsByGeneList = []
+            interactor1_type = intrctn.interactor_1.interactor_type
+            species1_name = intrctn.interactor_1.ensembl_gene.species.production_name 
+            identifier1 = intrctn.interactor_1.curies
+            ens_stbl_id_1 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id
+            identifier1_url = get_identifier_link(identifier1)
+
+            interactor1_dict = {"type":"species","name": species1_name,"gene": ens_stbl_id_1,"interactor":interactor1_type,"identifier": {"name":identifier1,"url":identifier1_url}}
+            interactions_results_dict["interactor_1"] = interactor1_dict
+      
         interactor2_type = intrctn.interactor_2.interactor_type
         identifier2 = intrctn.interactor_2.curies
+        identifier2_url = get_identifier_link(identifier2)
         source_db = intrctn.source_db.label
+        source_db_link = get_source_db_link(identifier1, source_db)
+        interactor2_dict = {}
+
         if interactor2_type == 'synthetic':
             interactor2_name = intrctn.interactor_2.name
-            interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":identifier2,"source_DB": source_db}
+            interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB": {"name":source_db,"url":source_db_link}}
         else:
             species2_name = intrctn.interactor_2.ensembl_gene.species.production_name 
             ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id
-            interactor2_dict = {"type":"species", "name": species2_name,"gene": ens_stbl_id_2,"interactor":interactor2_type,"identifier": identifier2,"source_DB": source_db}
+            interactor2_dict = {"type":"species", "name": species2_name,"gene": ens_stbl_id_2,"interactor":interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB":{"name":source_db,"url":source_db_link}}
         
         MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=intrctn.interaction_id)
-        metadataList = []
+        metadata_list = []
         
         for mo in MetadataByInteraction:
             metadata_dict = {}
             metadata_dict["label"] = mo.meta_key.name
             metadata_dict["value"] = mo.value
-            metadataList.append(metadata_dict)
+            metadata_list.append(metadata_dict)
 
-        interactionDict = {"interactor_1":interactor1_dict, "interactor_2":interactor2_dict, "metadata":metadataList}
+        interactor2_dict["metadata"] = metadata_list
+        interactors2_list.append(interactor2_dict)
         
-        InteractionsByGeneList.append(interactionDict)
-        
-    json_interactions_by_gene_list = json.dumps(InteractionsByGeneList)
-    return HttpResponse(json_interactions_by_gene_list)
+    interactions_results_dict = {"interactor_1":interactor1_dict, "interactors_2":interactors2_list}
+    json_response = json.dumps(interactions_results_dict)
+    return HttpResponse(json_response)
 
-class InteractionsForEnsgeneProdnameViewSet(
-    GenericViewSet,  # generic view functionality
-    RetrieveModelMixin,  # handles GETs for 1 Species
-    ListModelMixin):  # handles GETs for many Species
 
-    serializer_class = InteractionSerializer
+def get_source_db_link(identifier, source_db):
+    url = ''
+    if source_db == "PHI-base":
+        url = "http://www.phi-base.org/searchFacet.htm?queryTerm=" + identifier
+    elif source_db == "PlasticDB":
+        url = "https://plasticdb.org/proteins"
+    elif source_db == "HPIDB":
+        url = "https://hpidb.igbb.msstate.edu/keyword.html"
+    return url
 
-    def get_queryset(self):
-        ens_gene = self.kwargs['ens_gene']
-        prod_name = self.kwargs['prod_name']
-        return DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_gene) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_gene)).filter(Q(interactor_1__ensembl_gene_id__species_id__production_name__contains=prod_name) | Q(interactor_2__ensembl_gene_id__species_id__production_name__contains=prod_name))
+def get_identifier_link(identifier):
+    url_link = None
+    if "UNDETERMINED" not in identifier:
+        url_link = "https://identifiers.org/" + identifier
+    return url_link
 
 def source_db(request):
     return HttpResponse("Welcome! You're at the source_db response page.")
