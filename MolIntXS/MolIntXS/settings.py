@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-_cb+v5gd*a7*8airifh)&@=(l*rl@9ge#_x=j=0&9&72=3k=uj'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False#True
+DEBUG = True
 
 ALLOWED_HOSTS = ['ensembl.org', 'wp-p2m2-18', 'localhost', '127.0.0.1', 'wp-p2m2-18.ebi.ac.uk']
 
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +72,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'MolIntXS.wsgi.application'
+
 
 
 # Database
