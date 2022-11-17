@@ -37,23 +37,8 @@ class SpeciesSerializer(serializers.Serializer):
     production_name = serializers.CharField(style={'base_template': 'textarea.html'})
     taxon_id = serializers.IntegerField(read_only=True)
 
-
-    def create(self, validated_data):
-        """
-        Create and return a new `Species` instance, given the validated data.
-        """
-        return Species.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        """
-        Update and return an existing `Species` instance, given the validated data.
-        """
-        instance.ensembl_division = validated_data.get('ensembl_division', instance.ensembl_division)
-        instance.production_name = validated_data.get('production_name', instance.production_name)
-        instance.taxon_id = validated_data.get('taxon_id', instance.taxon_id)
-    
-        instance.save()
-        return instance
+    class Meta:
+        model = DBtables.Species
 
 
 class EnsemblGeneSerializer(serializers.Serializer):
@@ -62,20 +47,5 @@ class EnsemblGeneSerializer(serializers.Serializer):
     ensembl_stable_id = serializers.CharField(style={'base_template': 'textarea.html'})
     import_timestamp = serializers.DateTimeField()
 
-
-    def create(self, validated_data):
-        """
-        Create and return a new `EnsemblGene` instance, given the validated data.
-        """
-        return EnsemblGene.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        """
-        Update and return an existing `EnsemblGene` instance, given the validated data.
-        """
-        instance.species_id = validated_data.get('species_id', instance.species_id)
-        instance.ensembl_stable_id = validated_data.get('ensembl_stable_id', instance.ensembl_stable_id)
-        instance.import_timestamp = validated_data.get('import_timestamp', instance.import_timestamp)
-    
-        instance.save()
-        return instance
+    class Meta:
+        model = DBtables.EnsemblGene
