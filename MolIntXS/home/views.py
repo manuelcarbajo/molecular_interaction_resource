@@ -15,6 +15,19 @@ import json
 from json import JSONEncoder
 import numpy as np
 
+
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.decorators import api_view
+
+from drf_yasg import openapi
+
+from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
+
+#test_param = openapi.Parameter('test', openapi.IN_QUERY, description="test manual param", type=openapi.TYPE_INTEGER)
+#user_response = openapi.Response('response description',SpeciesSerializer)
+
+
 # Create your views here.
 def index(request):
     return HttpResponse("Welcome! You're at the MolIntXS index.")
@@ -22,24 +35,32 @@ def index(request):
 def prediction_method(request):
     return HttpResponse("Welcome! You're at the prediction_method response page.")
 
+@api_view(['GET'])
 def species_id(request, species_id):
     species_list = DBtables.Species.objects.filter(species_id=species_id)
     json_species = serialize('jsonl', species_list, cls=LazyEncoder)  
 
     return HttpResponse(json_species)
 
+# 'method' can be used to customize a single HTTP method of a view
+#@swagger_auto_schema(method='get', manual_parameters=[test_param], responses={200: user_response})
+# 'methods' can be used to apply the same modification to multiple methods
+#@swagger_auto_schema(methods=['put', 'post'], request_body=UserSerializer)
+@api_view(['GET'])
 def species(request):
     species_list = DBtables.Species.objects.all()
     json_species = serialize('jsonl', species_list, cls=LazyEncoder) 
     
     return HttpResponse(json_species)
 
+@api_view(['GET'])
 def ensembl_gene(request):
     gene_list = DBtables.EnsemblGene.objects.all()
     json_genes = serialize('jsonl', gene_list, cls=LazyEncoder) 
     
     return HttpResponse(json_genes)
 
+@api_view(['GET'])
 def interactions_by_prodname(request):
     species = DBtables.Species.objects.all()
     species_genes_List = []
@@ -57,7 +78,8 @@ def interactions_by_prodname(request):
             species_genes_List.append(species_dict)
     json_species_genes_list = json.loads(str(species_genes_List).replace("'",'"'))
     return HttpResponse(json_species_genes_list)
-        
+
+@api_view(['GET'])
 def display_by_gene(request,ens_stbl_id):
     interactions_by_queried_gene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id))
     interactions_results_dict = {"interactor_1":{},"interactors_2":[]}
@@ -102,7 +124,7 @@ def display_by_gene(request,ens_stbl_id):
         interactor2_dict["metadata"] = metadata_list
         interactors2_list.append(interactor2_dict)
         
-    interactions_results_dict = {"interactor_1":interactor1_dict, "interactors_2":interactors2_list}
+    interactions_results_dict = {"interactor_1":interactor1_dict, "interactor_2":interactors2_list}
     json_response = json.dumps(interactions_results_dict)
     return HttpResponse(json_response)
 
@@ -110,12 +132,19 @@ def display_by_gene(request,ens_stbl_id):
 def get_source_db_link(identifier, source_db):
     url = ''
     if source_db == "PHI-base":
-        url = "http://www.phi-base.org/searchFacet.htm?queryTerm=" + identifier
+        url = "http://www.phi-base.org/searchFacet.htm?queryTerm=" + clean_identifier(identifier)
     elif source_db == "PlasticDB":
         url = "https://plasticdb.org/proteins"
     elif source_db == "HPIDB":
         url = "https://hpidb.igbb.msstate.edu/keyword.html"
     return url
+
+def clean_identifier(raw_id):
+    if ":" in raw_id:
+        clean_id = raw_id.partition (":") [2]
+        return clean_id
+    else:
+        return raw_id
 
 def get_identifier_link(identifier):
     url_link = None
@@ -156,6 +185,7 @@ class SpeciesViewSet(GenericViewSet,  # generic view functionality
       serializer_class = SpeciesSerializer
       queryset = DBtables.Species.objects.all()
 
+@api_view(['GET'])
 class EnsemblGeneViewSet(GenericViewSet,  # generic view functionality
                      CreateModelMixin,  # handles POSTs
                      RetrieveModelMixin,  # handles GETs for 1 EnsemblGene
