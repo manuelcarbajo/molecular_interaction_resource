@@ -92,13 +92,16 @@ def display_by_gene(request,ens_stbl_id):
             species1_name = intrctn.interactor_1.ensembl_gene.species.production_name 
             identifier1 = intrctn.interactor_1.curies
             ens_stbl_id_1 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id
+            ensembl_gene_link_1 = get_gene_link(ens_stbl_id_1)
             identifier1_url = get_identifier_link(identifier1)
 
-            interactor1_dict = {"type":"species","name": species1_name,"gene": ens_stbl_id_1,"interactor":interactor1_type,"identifier": {"name":identifier1,"url":identifier1_url}}
+            interactor1_dict = {"type":"species","name": species1_name,"gene": {"name":ens_stbl_id_1,"url":ensembl_gene_link_1},"interactor":interactor1_type,"identifier": {"name":identifier1,"url":identifier1_url}}
             interactions_results_dict["interactor_1"] = interactor1_dict
       
         interactor2_type = intrctn.interactor_2.interactor_type
         identifier2 = intrctn.interactor_2.curies
+        if 'UNDETERMINED' in identifier2:
+            identifier2 = 'UNDETERMINED'
         identifier2_url = get_identifier_link(identifier2)
         source_db = intrctn.source_db.label
         source_db_link = get_source_db_link(identifier1, source_db)
@@ -109,8 +112,11 @@ def display_by_gene(request,ens_stbl_id):
             interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB": {"name":source_db,"url":source_db_link}}
         else:
             species2_name = intrctn.interactor_2.ensembl_gene.species.production_name 
-            ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id
-            interactor2_dict = {"type":"species", "name": species2_name,"gene": ens_stbl_id_2,"interactor":interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB":{"name":source_db,"url":source_db_link}}
+            ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id 
+            if 'UNDETERMINED' in ens_stbl_id_2:
+                ens_stbl_id_2 = 'UNDETERMINED'
+            ensembl_gene_link_2 = get_gene_link(ens_stbl_id_2)
+            interactor2_dict = {"type":"species", "name": species2_name,"gene": {"name":ens_stbl_id_2,"url":ensembl_gene_link_2},"interactor":interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB":{"name":source_db,"url":source_db_link}}
         
         MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=intrctn.interaction_id)
         metadata_list = []
@@ -150,6 +156,12 @@ def get_identifier_link(identifier):
     url_link = None
     if "UNDETERMINED" not in identifier:
         url_link = "https://identifiers.org/" + identifier
+    return url_link
+
+def get_gene_link(ensembl_gene):
+    url_link = None
+    if 'UNDETERMINED' not in ensembl_gene:
+        url_link = "https://ensemblgenomes.org/id/" + ensembl_gene
     return url_link
 
 def source_db(request):
