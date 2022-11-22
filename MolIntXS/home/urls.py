@@ -16,9 +16,7 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
-
 urlpatterns = [
-    #path('', views.index, name='index'),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
@@ -27,5 +25,4 @@ urlpatterns = [
     path('ensembl_gene/', views.ensembl_gene, name='ensembl_gene'),
     path('interactions_by_prodname/', views.interactions_by_prodname, name='interactions_by_prodname'),
     path('display_by_gene/<str:ens_stbl_id>/', views.display_by_gene, name='display_by_gene'),
-
 ]
