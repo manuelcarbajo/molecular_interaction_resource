@@ -89,7 +89,6 @@ DATABASES = {
 }
 
 
-
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 
@@ -108,9 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-SWAGGER_SETTINGS = {
-        'SUPPORTED_SUBMIT_METHODS' : []
-}
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
