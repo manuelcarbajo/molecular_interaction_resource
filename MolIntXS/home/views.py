@@ -1,31 +1,23 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.db.models import Q
-
+from django.core.serializers import serialize
 from rest_framework.mixins import (
     CreateModelMixin, ListModelMixin, RetrieveModelMixin, UpdateModelMixin
 )
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.decorators import api_view
 import home.models as DBtables
 from .models import Species, EnsemblGene
 from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
-from django.core.serializers import serialize
 from .serializers import LazyEncoder
 import json
 from json import JSONEncoder
 import numpy as np
 
-
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.decorators import api_view
-
-from drf_yasg import openapi
-
-from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
 from datetime import datetime
-#test_param = openapi.Parameter('test', openapi.IN_QUERY, description="test manual param", type=openapi.TYPE_INTEGER)
-#user_response = openapi.Response('response description',SpeciesSerializer)
 
 
 # Create your views here.
