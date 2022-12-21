@@ -26,4 +26,7 @@ urlpatterns = [
     path('ensembl_gene/', views.ensembl_gene, name='ensembl_gene'),
     path('interactions_by_prodname/', views.interactions_by_prodname, name='interactions_by_prodname'),
     path('display_by_gene/<str:ens_stbl_id>/', views.display_by_gene, name='display_by_gene'),
-]
+    path('display_by_gene/<str:ens_stbl_id>', views.display_by_gene, name='display_by_gene'),
+    re_path(r'^.*$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger_ui'),
+    ]
+
