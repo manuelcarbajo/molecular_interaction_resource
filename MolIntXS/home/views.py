@@ -134,15 +134,7 @@ def display_by_gene(request,ens_stbl_id):
             ensembl_gene_link_2 = get_gene_link(ens_stbl_id_2)
             interactor2_dict = {"type":"species", "name": species2_name,"gene": {"name":ens_stbl_id_2,"url":ensembl_gene_link_2},"interactor":interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB":{"name":source_db,"url":source_db_link}}
         
-        MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=intrctn.interaction_id)
-        metadata_list = []
-        
-        for mo in MetadataByInteraction:
-            metadata_dict = {}
-            metadata_dict["label"] = mo.meta_key.name
-            metadata_dict["value"] = mo.value
-            metadata_list.append(metadata_dict)
-
+        metadata_list = get_metadata_list(intrctn.interaction_id)
         interactor2_dict["metadata"] = metadata_list
         interactors2_list.append(interactor2_dict)
 
@@ -152,6 +144,26 @@ def display_by_gene(request,ens_stbl_id):
         interactions_results_dict = {}
     json_response = json.dumps(interactions_results_dict)
     return HttpResponse(json_response)
+
+def get_metadata_list(interaction_id):
+    MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=interaction_id)
+    metadata_list = []
+    
+    for mo in MetadataByInteraction:
+        metadata_dict = {}
+        metadata_dict['label'] = mo.meta_key.name
+        metadata_dict['value'] = mo.value
+        if any(mo.meta_key.name in d.values() for d in metadata_list):
+            metadata_list = [
+                    {
+                        'label':'message',
+                        'value':'Several experiments exists for this interaction. Please follow the link to the original database to learn more about it'
+                    }
+                ]
+            return metadata_list
+        else:
+            metadata_list.append(metadata_dict)
+    return metadata_list
 
 def get_source_db_link(identifier, source_db):
     url = ''
