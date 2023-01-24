@@ -1,31 +1,23 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.db.models import Q
-
+from django.core.serializers import serialize
 from rest_framework.mixins import (
     CreateModelMixin, ListModelMixin, RetrieveModelMixin, UpdateModelMixin
 )
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.decorators import api_view
 import home.models as DBtables
 from .models import Species, EnsemblGene
 from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
-from django.core.serializers import serialize
 from .serializers import LazyEncoder
 import json
 from json import JSONEncoder
 import numpy as np
 
-
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.decorators import api_view
-
-from drf_yasg import openapi
-
-from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
-
-#test_param = openapi.Parameter('test', openapi.IN_QUERY, description="test manual param", type=openapi.TYPE_INTEGER)
-#user_response = openapi.Response('response description',SpeciesSerializer)
+from datetime import datetime
 
 
 # Create your views here.
@@ -35,6 +27,10 @@ def index(request):
 def prediction_method(request):
     return HttpResponse("Welcome! You're at the prediction_method response page.")
 
+    #path('', views.index, name='index'),
+    #path('', views.index, name='index'),
+  
+@swagger_auto_schema(method='get',operation_description="Returns all the information available for the species with the provided identifier (int).")
 @api_view(['GET'])
 def species_id(request, species_id):
     species_list = DBtables.Species.objects.filter(species_id=species_id)
@@ -46,6 +42,8 @@ def species_id(request, species_id):
 #@swagger_auto_schema(method='get', manual_parameters=[test_param], responses={200: user_response})
 # 'methods' can be used to apply the same modification to multiple methods
 #@swagger_auto_schema(methods=['put', 'post'], request_body=UserSerializer)
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of all Ensembl species annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def species(request):
     species_list = DBtables.Species.objects.all()
@@ -53,6 +51,7 @@ def species(request):
     
     return HttpResponse(json_species)
 
+@swagger_auto_schema(method='get',operation_description="Returns a list of all Ensembl genes annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def ensembl_gene(request):
     gene_list = DBtables.EnsemblGene.objects.all()
@@ -60,36 +59,53 @@ def ensembl_gene(request):
     
     return HttpResponse(json_genes)
 
+
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of all external databases from which we have imported molecular interaction.")
+@api_view(['GET'])
+def source_dbs(request):
+    source_db_list = DBtables.SourceDb.objects.all()
+    fields_list = []
+
+    for db in source_db_list:
+        fields_list.append({db.label:db.external_db}) 
+    return HttpResponse(fields_list)
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactions (listed by Ensembl species).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def interactions_by_prodname(request):
-    species = DBtables.Species.objects.all()
+    
     species_genes_List = []
-    species_dict = {}
-    for sp in species:
-        sp_id = sp.species_id
-        genes = DBtables.EnsemblGene.objects.filter(Q(curatedinteractor__interaction_for_int2__interactor_2__ensembl_gene__species_id=sp_id) | Q(curatedinteractor__interaction_for_int1__interactor_1__ensembl_gene__species_id=sp_id))
-        genes_per_specie_List = []
-        for gene in genes:
-            if 'UNDETERMINED' not in gene.ensembl_stable_id:
-                genes_per_specie_List.append(gene.ensembl_stable_id)
-        if genes_per_specie_List:
-            unique_gene_list = list(set(genes_per_specie_List))
-            species_dict = {sp.production_name:unique_gene_list}
-            species_genes_List.append(species_dict)
-    json_species_genes_list = json.loads(str(species_genes_List).replace("'",'"'))
-    return HttpResponse(json_species_genes_list)
+    ensembl_gene_query_set = DBtables.EnsemblGene.objects.select_related('species')
 
+    species_gene_dict = {}
+    for eg in ensembl_gene_query_set:
+        if 'UNDETERMINED' not in eg.ensembl_stable_id:
+            prod_name = eg.species.production_name
+            if prod_name in species_gene_dict:
+                genes_list = species_gene_dict[prod_name]
+                genes_list.append(eg.ensembl_stable_id)
+                species_gene_dict[prod_name] = genes_list
+            else:
+                species_gene_dict[prod_name] = [eg.ensembl_stable_id]
+    json_species_genes = json.dumps(species_gene_dict)
+    return HttpResponse(json_species_genes)
+
+@swagger_auto_schema(method='get',operation_description="Returns all the interactions available for a particular Ensembl gene (defined by its Ensembl stable identifier)")
 @api_view(['GET'])
 def display_by_gene(request,ens_stbl_id):
-    interactions_by_queried_gene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id__contains=ens_stbl_id))
+    interactions_by_queried_gene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id=ens_stbl_id))
     interactions_results_dict = {"interactor_1":{},"interactors_2":[]}
-    interactors2_list = [] 
+    interactor1_dict = {}
+    interactor2_dict = {}
 
+    interactors2_list = [] 
+    
     for intrctn in interactions_by_queried_gene:
         if not interactions_results_dict["interactor_1"]:
             InteractionsByGeneList = []
             interactor1_type = intrctn.interactor_1.interactor_type
-            species1_name = intrctn.interactor_1.ensembl_gene.species.production_name 
+            species1_name = intrctn.interactor_1.ensembl_gene.species.scientific_name 
             identifier1 = intrctn.interactor_1.curies
             ens_stbl_id_1 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id
             ensembl_gene_link_1 = get_gene_link(ens_stbl_id_1)
@@ -111,29 +127,42 @@ def display_by_gene(request,ens_stbl_id):
             interactor2_name = intrctn.interactor_2.name
             interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB": {"name":source_db,"url":source_db_link}}
         else:
-            species2_name = intrctn.interactor_2.ensembl_gene.species.production_name 
+            species2_name = intrctn.interactor_2.ensembl_gene.species.scientific_name 
             ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id 
             if 'UNDETERMINED' in ens_stbl_id_2:
                 ens_stbl_id_2 = 'UNDETERMINED'
             ensembl_gene_link_2 = get_gene_link(ens_stbl_id_2)
             interactor2_dict = {"type":"species", "name": species2_name,"gene": {"name":ens_stbl_id_2,"url":ensembl_gene_link_2},"interactor":interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB":{"name":source_db,"url":source_db_link}}
         
-        MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=intrctn.interaction_id)
-        metadata_list = []
-        
-        for mo in MetadataByInteraction:
-            metadata_dict = {}
-            metadata_dict["label"] = mo.meta_key.name
-            metadata_dict["value"] = mo.value
-            metadata_list.append(metadata_dict)
-
+        metadata_list = get_metadata_list(intrctn.interaction_id,source_db_link)
         interactor2_dict["metadata"] = metadata_list
         interactors2_list.append(interactor2_dict)
-        
-    interactions_results_dict = {"interactor_1":interactor1_dict, "interactor_2":interactors2_list}
+
+    if interactor1_dict != {}:
+        interactions_results_dict = {"interactor_1":interactor1_dict, "interactor_2":interactors2_list}
+    else:
+        interactions_results_dict = {}
     json_response = json.dumps(interactions_results_dict)
     return HttpResponse(json_response)
 
+def get_metadata_list(interaction_id, source_db_link):
+    MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=interaction_id)
+    metadata_list = []
+    
+    for mo in MetadataByInteraction:
+        metadata_dict = {}
+        metadata_dict['label'] = mo.meta_key.name
+        metadata_dict['value'] = mo.value
+        if any(mo.meta_key.name in d.values() for d in metadata_list):
+            metadata_list = [
+                    {
+                        'value':'Several experiments exist for this interaction. Please click  <a href=' + source_db_link + " target='_blank'>here</a>" + ' for more information'
+                    }
+                ]
+            return metadata_list
+        else:
+            metadata_list.append(metadata_dict)
+    return metadata_list
 
 def get_source_db_link(identifier, source_db):
     url = ''
@@ -163,9 +192,6 @@ def get_gene_link(ensembl_gene):
     if 'UNDETERMINED' not in ensembl_gene:
         url_link = "https://ensemblgenomes.org/id/" + ensembl_gene
     return url_link
-
-def source_db(request):
-    return HttpResponse("Welcome! You're at the source_db response page.")
 
 def meta_key(request):
     return HttpResponse("Welcome! You're at the meta_key response page.")
