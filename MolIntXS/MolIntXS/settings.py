@@ -26,10 +26,10 @@ SECRET_KEY = 'django-insecure-_cb+v5gd*a7*8airifh)&@=(l*rl@9ge#_x=j=0&9&72=3k=uj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False#True
 
-ALLOWED_HOSTS = ['ensembl.org', 'wp-p2m2-18', 'localhost', '127.0.0.1', 'wp-p2m2-18.ebi.ac.uk']
+ALLOWED_HOSTS = ['interactions.rest.ensembl.org','ensembl.org', 'wp-p2m2-18', 'localhost', '127.0.0.1', 'wp-p2m2-18.ebi.ac.uk']
 
 
-# Application definition
+# Application definition 
 
 INSTALLED_APPS = [
     'home.apps.HomeConfig',
@@ -51,6 +51,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = 'MolIntXS.urls'
@@ -107,6 +109,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Swagger settings
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
@@ -124,7 +131,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATIC_ROOT = 'static_files'
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
