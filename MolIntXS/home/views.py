@@ -170,7 +170,7 @@ def get_source_db_link(identifier, source_db):
         url = "http://www.phi-base.org/searchFacet.htm?queryTerm=" + clean_identifier(identifier)
     elif source_db == "PlasticDB":
         url = "https://plasticdb.org/proteins"
-    elif source_db == "HPIDB":
+    elif "HPIDB" in source_db:
         url = "https://hpidb.igbb.msstate.edu/keyword.html"
     return url
 
