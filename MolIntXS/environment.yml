@@ -1,0 +1,27 @@
+name: MolIntXS
+channels:
+  - deepmodeling
+  - conda-forge
+  - anaconda
+  - pantheon
+  - conda-forge/label/broken
+dependencies:
+  - conda-pack
+  - django==3.2
+  - django-rest-swagger
+  - djangorestframework
+  - git
+  - inflection
+  - mysql
+  - mysqlclient
+  - numpy
+  - packaging
+  - pip
+  - python=3.10.3
+  - requests
+  - ruamel.yaml
+  - screen
+  - vim
+  - whitenoise
+  - pip:
+    - drf-yasg==1.21.5
