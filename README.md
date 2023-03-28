@@ -1,4 +1,4 @@
-# Molecular interaction REST API server
+# Molecular interactions REST API server
 This repo hosts the code necessary to run the REST API server that manages the endpoints to query the Molecular interactions database resource from Ensembl.
 The pipeline that populates the actual database (Map_interspecies_interactions) uses a separate repository hosted at https://github.com/Ensembl/ensembl-production-imported  
 
@@ -9,7 +9,7 @@ Please, make sure you have all the proper credential, keys, etc. set up.
 ### Getting this repo
 
 ```
-git clone git@github.com:Ensembl/molecular_interaction_resource.git
+git clone git@github.com:Ensembl/molecular_interactions_resource.git
 ```
 
 ### Configuration
@@ -21,8 +21,7 @@ It runs inside a virtual conda environment which itself lives inside a virtual m
 
 ### Initialising and running the server
 
-Log in to codon
-Log in to a web-production network
+Log into a web-production network
 Become one of the authorised virtual users
 Log into the virtual machine
 Activate the virtual conda environment
