@@ -21,8 +21,7 @@ It runs inside a virtual conda environment which itself lives inside a virtual m
 
 ### Initialising and running the server
 
-Log in to codon
-Log in to a web-production network
+Log into a web-production network
 Become one of the authorised virtual users
 Log into the virtual machine
 Activate the virtual conda environment

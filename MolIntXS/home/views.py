@@ -30,7 +30,7 @@ def prediction_method(request):
     #path('', views.index, name='index'),
     #path('', views.index, name='index'),
   
-@swagger_auto_schema(method='get',operation_description="Returns all the information available for the species with the provided identifier (int).")
+@swagger_auto_schema(method='get',operation_description="Returns a species object containing all the information available for the species with the provided identifier (int).")
 @api_view(['GET'])
 def species_id(request, species_id):
     species_list = DBtables.Species.objects.filter(species_id=species_id)
@@ -38,12 +38,31 @@ def species_id(request, species_id):
 
     return HttpResponse(json_species)
 
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of species objects containing all the information available for a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo sapiens')")
+@api_view(['GET'])
+def species_by_ensembl_name(request, species_production_name):
+    species_list = DBtables.Species.objects.filter(production_name__icontains=species_production_name)
+    json_species = serialize('jsonl', species_list, cls=LazyEncoder)  
+
+    return HttpResponse(json_species)
+
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of species objects with all the information available for a specific species scientific name passed as a parameter using the case non sensitive format: genus species (ie.- 'homo sapiens')")
+@api_view(['GET'])
+def species_by_scientific_name(request, species_scientific_name):
+    species_list = DBtables.Species.objects.filter(scientific_name__icontains=species_scientific_name)
+    json_species = serialize('jsonl', species_list, cls=LazyEncoder)  
+
+    return HttpResponse(json_species)
+
+
 # 'method' can be used to customize a single HTTP method of a view
 #@swagger_auto_schema(method='get', manual_parameters=[test_param], responses={200: user_response})
 # 'methods' can be used to apply the same modification to multiple methods
 #@swagger_auto_schema(methods=['put', 'post'], request_body=UserSerializer)
 
-@swagger_auto_schema(method='get',operation_description="Returns a list of all Ensembl species annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@swagger_auto_schema(method='get',operation_description="Returns a list of species objects annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def species(request):
     species_list = DBtables.Species.objects.all()
@@ -51,7 +70,7 @@ def species(request):
     
     return HttpResponse(json_species)
 
-@swagger_auto_schema(method='get',operation_description="Returns a list of all Ensembl genes annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@swagger_auto_schema(method='get',operation_description="Returns a list of all Ensembl gene objects annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def ensembl_gene(request):
     gene_list = DBtables.EnsemblGene.objects.all()
@@ -91,7 +110,7 @@ def interactions_by_prodname(request):
     json_species_genes = json.dumps(species_gene_dict)
     return HttpResponse(json_species_genes)
 
-@swagger_auto_schema(method='get',operation_description="Returns all the interactions available for a particular Ensembl gene (defined by its Ensembl stable identifier)")
+@swagger_auto_schema(method='get',operation_description="Returns a list of all the interactions available for a particular Ensembl gene (defined by its Ensembl stable identifier)")
 @api_view(['GET'])
 def display_by_gene(request,ens_stbl_id):
     interactions_by_queried_gene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id=ens_stbl_id))
@@ -117,12 +136,11 @@ def display_by_gene(request,ens_stbl_id):
         interactor2_type = intrctn.interactor_2.interactor_type
         identifier2 = intrctn.interactor_2.curies
         if 'UNDETERMINED' in identifier2:
-            identifier2 = 'UNDETERMINED'
+            identifier2 = 'UNDETERMINED';
         identifier2_url = get_identifier_link(identifier2)
         source_db = intrctn.source_db.label
         source_db_link = get_source_db_link(identifier1, source_db)
         interactor2_dict = {}
-
         if interactor2_type == 'synthetic':
             interactor2_name = intrctn.interactor_2.name
             interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB": {"name":source_db,"url":source_db_link}}
@@ -144,6 +162,65 @@ def display_by_gene(request,ens_stbl_id):
         interactions_results_dict = {}
     json_response = json.dumps(interactions_results_dict)
     return HttpResponse(json_response)
+
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors (listed by their Ensembl species name, also known as production name).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def interactors_by_prodname(request):
+    
+    species_genes_List = []
+    ensembl_gene_query_set = DBtables.EnsemblGene.objects.select_related('species')
+
+    species_gene_dict = {}
+    for eg in ensembl_gene_query_set:
+        if 'UNDETERMINED' not in eg.ensembl_stable_id:
+            prod_name = eg.species.production_name
+            if prod_name in species_gene_dict:
+                genes_list = species_gene_dict[prod_name]
+                genes_list.append(eg.ensembl_stable_id)
+                species_gene_dict[prod_name] = genes_list
+            else:
+                species_gene_dict[prod_name] = [eg.ensembl_stable_id]
+    json_species_genes = json.dumps(species_gene_dict)
+    return HttpResponse(json_species_genes)
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors for a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')")
+@api_view(['GET'])
+def interactors_by_specific_prodname(request, species_production_name):
+    
+    species_genes_List = []
+    ensembl_gene_query_set = DBtables.EnsemblGene.objects.select_related('species').filter(species__production_name__icontains=species_production_name).exclude(ensembl_stable_id__icontains='UNDETERMINED')
+
+    species_gene_dict = {}
+    for eg in ensembl_gene_query_set:
+        prod_name = eg.species.production_name
+        if prod_name in species_gene_dict:
+            genes_list = species_gene_dict[prod_name]
+            genes_list.append(eg.ensembl_stable_id)
+            species_gene_dict[prod_name] = genes_list
+        else:
+            species_gene_dict[prod_name] = [eg.ensembl_stable_id]
+    json_species_genes = json.dumps(species_gene_dict)
+    return HttpResponse(json_species_genes)
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors for a specific species scientific name passed as a parameter using the case non sensitive format: genus species (ie.- 'homo sapiens')")
+@api_view(['GET'])
+def interactors_by_specific_scientific_name(request, species_scientific_name):
+    
+    species_genes_List = []
+    ensembl_gene_query_set = DBtables.EnsemblGene.objects.select_related('species').filter(species__scientific_name__icontains=species_scientific_name).exclude(ensembl_stable_id__icontains='UNDETERMINED')
+    
+    species_gene_dict = {}
+    for eg in ensembl_gene_query_set:
+        science_name = eg.species.scientific_name
+        if science_name in species_gene_dict:
+            genes_list = species_gene_dict[science_name]
+            genes_list.append(eg.ensembl_stable_id)
+            species_gene_dict[science_name] = genes_list
+        else:
+            species_gene_dict[science_name] = [eg.ensembl_stable_id]
+    json_species_genes = json.dumps(species_gene_dict)
+    return HttpResponse(json_species_genes)
 
 def get_metadata_list(interaction_id, source_db_link):
     MetadataByInteraction = DBtables.KeyValuePair.objects.filter(interaction_id=interaction_id)
