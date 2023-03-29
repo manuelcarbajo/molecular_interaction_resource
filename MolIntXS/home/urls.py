@@ -31,6 +31,7 @@ urlpatterns = [
     path('source_dbs', views.source_dbs, name='source_dbs'),
     path('ensembl_gene', views.ensembl_gene, name='ensembl_gene'),
     path('interactions_by_prodname', views.interactions_by_prodname, name='interactions_by_prodname'),
+    path('interactors', views.interactors, name='interactors'),
     path('interactors/by_ensembl_name', views.interactors_by_prodname, name='interactors_by_prodname'),
     path('interactors/by_ensembl_name/<str:species_production_name>', views.interactors_by_specific_prodname, name='interactors_by_specific_prodname'),
     path('interactors/by_scientific_name/<str:species_scientific_name>', views.interactors_by_specific_scientific_name, name='interactors_by_specific_scientific_name'),

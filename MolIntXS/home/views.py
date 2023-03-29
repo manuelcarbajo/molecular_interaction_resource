@@ -118,6 +118,35 @@ def source_dbs(request):
         fields_list.append({db.label:db.external_db}) 
     return HttpResponse(fields_list)
 
+@swagger_auto_schema(method='get',operation_description="Returns all interactor objects (uniquely identified by their curies).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def interactors(request):
+    interactors_query_set = DBtables.CuratedInteractor.objects.all()
+    interactors_dict = {}
+
+    for ci in interactors_query_set:
+        interactors_dict[ci.curies] = {"curated_interactor_id":ci.curated_interactor_id,
+                                       "interactor_type":ci.interactor_type,
+                                       "name":ci.name,
+                                       "ensembl_gene_id":ci.ensembl_gene_id}
+    json_interactors = json.dumps(interactors_dict)
+    return HttpResponse(json_interactors)
+
+@swagger_auto_schema(method='get',operation_description="Returns all interactions listed by their primary_key (uniquely identified by a combination of interactor_1,interactor_2, DOI publication, and source_db).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def interactions(request):
+    interactions_query_set = DBtables.Interaction.objects.select_related('interactor_1').select_related('interactor_2').select_related('source_db').all()
+    interactions_dict = {}
+    for i in interactions_query_set:
+        interactions_dict[i.interaction_id] = {"interaction_id":i.interaction_id,
+                                               "interactor_1":i.interactor_1.curies,
+                                               "interactor_2":i.interactor_2.curies,
+                                               "doi":i.doi,
+                                               "source_db":i.source_db.label}
+    json_interactions = json.dumps(interactions_dict)
+    return HttpResponse(json_interactions)
+
+
 @swagger_auto_schema(method='get',operation_description="Returns all molecular interactions (listed by Ensembl species).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def interactions_by_prodname(request):
@@ -303,18 +332,6 @@ def ontology(request):
 
 def ontology_term(request):
     return HttpResponse("Welcome! You're at the ontology_term response page.")
-
-def curated_interactor(request):
-    return HttpResponse("Welcome! You're at the curated_interactor response page.")
-
-def predicted_interactor(request):
-    return HttpResponse("Welcome! You're at the predicted_interactor response page.")
-
-def interaction(request):
-    return HttpResponse("Welcome! You're at the interaction response page.")
-
-def key_value_pair(request):
-    return HttpResponse("Welcome! You're at the key_value_pair response page.")
 
 class SpeciesViewSet(GenericViewSet,  # generic view functionality
                      CreateModelMixin,  # handles POSTs
