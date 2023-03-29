@@ -8,7 +8,7 @@ from rest_framework.mixins import (
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import api_view
 import home.models as DBtables
-from .models import Species, EnsemblGene
+from .models import Species, EnsemblGene, MetaKey, KeyValuePair
 from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
 from .serializers import LazyEncoder
 import json
@@ -37,6 +37,15 @@ def species_id(request, species_id):
     json_species = serialize('jsonl', species_list, cls=LazyEncoder)  
 
     return HttpResponse(json_species)
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of all interaction objects available.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def interactions(request):
+    interaction_list = DBtables.Interaction.objects.all()
+    json_interactions = serialize('jsonl', interaction_list, cls=LazyEncoder)  
+
+    return HttpResponse(json_interactions)
+
 
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of species objects containing all the information available for a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo sapiens')")
@@ -69,6 +78,25 @@ def species(request):
     json_species = serialize('jsonl', species_list, cls=LazyEncoder) 
     
     return HttpResponse(json_species)
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of all meta_value objects available.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def meta_values(request):
+    metavalues_list = DBtables.KeyValuePair.objects.all()
+    json_metavalues = serialize('jsonl', metavalues_list, cls=LazyEncoder)  
+
+    return HttpResponse(json_metavalues)
+
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of all meta_key objects available.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def meta_keys(request):
+    print("meta_keys")
+    metakey_list = DBtables.MetaKey.objects.all()
+    json_metakeys = serialize('jsonl', metakey_list, cls=LazyEncoder)  
+
+    return HttpResponse(json_metakeys)
+
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of all Ensembl gene objects annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
@@ -269,9 +297,6 @@ def get_gene_link(ensembl_gene):
     if 'UNDETERMINED' not in ensembl_gene:
         url_link = "https://ensemblgenomes.org/id/" + ensembl_gene
     return url_link
-
-def meta_key(request):
-    return HttpResponse("Welcome! You're at the meta_key response page.")
 
 def ontology(request):
     return HttpResponse("Welcome! You're at the ontology response page.")
