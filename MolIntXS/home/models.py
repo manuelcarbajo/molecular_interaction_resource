@@ -62,6 +62,9 @@ class MetaKey(models.Model):
     name = models.CharField(unique=True, max_length=255)
     description = models.CharField(unique=True, max_length=255)
 
+    def __str__(self):
+        return 'id: {}, name: {}, description: {}'.format(str(self.meta_key_id),self.name,self.description)
+
     class Meta:
         managed = True
         db_table = 'meta_key'
@@ -129,6 +132,9 @@ class Interaction(models.Model):
     source_db = models.ForeignKey('SourceDb', models.DO_NOTHING)
     import_timestamp = models.DateTimeField()
 
+    def __str__(self):
+        return 'id: {}, interactor_1: {}, interactor_2: {}, doi: {}, source_db:{}'.format(str(self.interaction_id),str(self.interactor_1),str(self.interactor_2),self.doi, str(self.source_db))
+
     class Meta:
         managed = True
         db_table = 'interaction'
@@ -141,6 +147,9 @@ class KeyValuePair(models.Model):
     meta_key = models.ForeignKey('MetaKey', models.DO_NOTHING)
     value = models.CharField(max_length=255)
     ontology_term = models.ForeignKey('OntologyTerm', models.DO_NOTHING, blank=True, null=True)
+
+    def __str__(self):
+        return 'id: {}, interaction: {}, meta_key: {}, value: {}, ontology_term: {}'.format(str(self.key_value_id),str(self.interaction),str(self.meta_key),self.value,str(self.ontology_term))
 
     class Meta:
         managed = True
