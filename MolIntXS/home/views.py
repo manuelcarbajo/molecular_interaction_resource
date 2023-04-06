@@ -6,7 +6,10 @@ from rest_framework.mixins import (
     CreateModelMixin, ListModelMixin, RetrieveModelMixin, UpdateModelMixin
 )
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.views import APIView
 from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import generics, status
 import home.models as DBtables
 from .models import Species, EnsemblGene, MetaKey, KeyValuePair
 from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
@@ -14,22 +17,96 @@ from .serializers import LazyEncoder
 import json
 from json import JSONEncoder
 import numpy as np
-
+import django_filters
+from django_filters import rest_framework as filters
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from datetime import datetime
+from django.db.models import Q
+
+"""
+class InteractionFilter(django_filters.FilterSet):
+    
+    interaction_id = django_filters.CharFilter(method='interaction_id_filter')
+    meta_key = django_filters.CharFilter(method='metakey_filter',lookup_expr='icontains')
+    value = django_filters.CharFilter(method='value_filter',lookup_expr='icontains')
 
 
-# Create your views here.
-def index(request):
-    return HttpResponse("Welcome! You're at the MolIntXS index.")
+    class Meta:
+        model = Interaction
+        fields = ['interaction_id','meta_key','meta_value']
+    
+    def metakey_filter(self,queryset,meta_key,value):
+        return queryset.filter(meta_key__name__icontains=value)
+    
+    def value_filter(self,queryset,value,mvalue):
+        return queryset.filter(value__icontains=mvalue)
+    
+    def interaction_id_filter(self,queryset,interaction_id,value):
+        return queryset.filter(interaction_id=value)
 
-def prediction_method(request):
-    return HttpResponse("Welcome! You're at the prediction_method response page.")
+class InteractionList(generics.ListAPIView):
+    queryset = DBtables.KeyValuePair.objects.select_related('interaction').select_related('meta_key').select_related('source_db').all()
+    filterset_class = InteractionFilter
+    serializer_class = InmteractionSerializer
+"""
+   # @swagger_auto_schema(operation_description="* /species \n\t\t\tReturns a list of species objects annotated with a molecular interaction.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:\n\n\t\t* ?species_id={integer} \n\t\t\tReturns all the information available for the species with the provided integer identifier(ie.- '/species/?species_id=15').\n\n\t\t* ?scientific_name={string} \n\t\t\tReturns a list of species loosely matching a specific scientific name passed as a parameter using the case non sensitive format: genus species (ie.- '/species/?scientific_name=homo sapiens')\n\n\t\t * ?production_name={string} \n\t\t\tReturns a list of species loosely matching a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')\n")
+"""
 
-    #path('', views.index, name='index'),
-    #path('', views.index, name='index'),
-  
+def get(self,request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        response = serializer.data
+        return Response(response) 
+"""
+class SpeciesFilter(django_filters.FilterSet):
+    
+    scientific_name = django_filters.CharFilter(method='sc_name_filter',lookup_expr='icontains')
+    production_name = django_filters.CharFilter(method='prod_name_filter',lookup_expr='icontains')
+    species_id = django_filters.CharFilter(method='sp_id_filter')
+
+
+    class Meta:
+        model = Species
+        fields = ['species_id','scientific_name','production_name']
+    
+    def sc_name_filter(self,queryset,scientific_name,value):
+        return queryset.filter(scientific_name__icontains=value)
+    
+    def prod_name_filter(self,queryset,production_name,value):
+        return queryset.filter(production_name__icontains=value)
+    
+    def sp_id_filter(self,queryset,species_id,value):
+        return queryset.filter(species_id=value)
+
+class SpeciesList(generics.ListAPIView):
+    queryset = DBtables.Species.objects.all()
+    filterset_class = SpeciesFilter
+    serializer_class = SpeciesSerializer
+
+    @swagger_auto_schema(operation_description="* /species \n\t\t\tReturns a list of species objects annotated with a molecular interaction.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:\n\n\t\t* ?species_id={integer} \n\t\t\tReturns all the information available for the species with the provided integer identifier(ie.- '/species/?species_id=15').\n\n\t\t* ?scientific_name={string} \n\t\t\tReturns a list of species loosely matching a specific scientific name passed as a parameter using the case non sensitive format: genus species (ie.- '/species/?scientific_name=homo sapiens')\n\n\t\t * ?production_name={string} \n\t\t\tReturns a list of species loosely matching a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')\n")
+    def get(self,request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        response = serializer.data
+        return Response(response) 
+
+@swagger_auto_schema(method='get',operation_description="Returns a list of species objects annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def species(request):
+    species_query_set = DBtables.Species.objects.all()
+    species_dict = {}
+
+    for s in species_query_set:
+        species_dict[s.species_id] = {"species_id":s.species_id,
+                                      "ensembl_production_name":s.production_name,
+                                      "scientific_name":s.scientific_name,
+                                      "ensembl_division":s.ensembl_division,
+                                      "taxon_id":s.taxon_id}
+    json_species = json.dumps(species_dict)
+    return HttpResponse(json_species)
+
+
 @swagger_auto_schema(method='get',operation_description="Returns a species object containing all the information available for the species with the provided identifier (int).")
 @api_view(['GET'])
 def species_id(request, species_id):
@@ -38,85 +115,107 @@ def species_id(request, species_id):
 
     return HttpResponse(json_species)
 
-@swagger_auto_schema(method='get',operation_description="Returns a list of all interaction objects available.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
-@api_view(['GET'])
-def interactions(request):
-    interaction_list = DBtables.Interaction.objects.all()
-    json_interactions = serialize('jsonl', interaction_list, cls=LazyEncoder)  
-
-    return HttpResponse(json_interactions)
-
-
-
 @swagger_auto_schema(method='get',operation_description="Returns a list of species objects containing all the information available for a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo sapiens')")
 @api_view(['GET'])
 def species_by_ensembl_name(request, species_production_name):
-    species_list = DBtables.Species.objects.filter(production_name__icontains=species_production_name)
-    json_species = serialize('jsonl', species_list, cls=LazyEncoder)  
+    species_query_set = DBtables.Species.objects.filter(production_name__icontains=species_production_name)
+    species_dict = {}
 
+    for s in species_query_set:
+        species_dict[s.species_id] = {"species_id":s.species_id,
+                                      "ensembl_production_name":s.production_name,
+                                      "scientific_name":s.scientific_name,
+                                      "ensembl_division":s.ensembl_division,
+                                      "taxon_id":s.taxon_id}
+    json_species = json.dumps(species_dict)
     return HttpResponse(json_species)
-
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of species objects with all the information available for a specific species scientific name passed as a parameter using the case non sensitive format: genus species (ie.- 'homo sapiens')")
 @api_view(['GET'])
 def species_by_scientific_name(request, species_scientific_name):
-    species_list = DBtables.Species.objects.filter(scientific_name__icontains=species_scientific_name)
-    json_species = serialize('jsonl', species_list, cls=LazyEncoder)  
+    species_query_set = DBtables.Species.objects.filter(scientific_name__icontains=species_scientific_name) 
+    species_dict = {}
 
+    for s in species_query_set:
+        species_dict[s.species_id] = {"species_id":s.species_id,
+                                      "ensembl_production_name":s.production_name,
+                                      "scientific_name":s.scientific_name,
+                                      "ensembl_division":s.ensembl_division,
+                                      "taxon_id":s.taxon_id}
+    json_species = json.dumps(species_dict)
     return HttpResponse(json_species)
-
 
 # 'method' can be used to customize a single HTTP method of a view
 #@swagger_auto_schema(method='get', manual_parameters=[test_param], responses={200: user_response})
 # 'methods' can be used to apply the same modification to multiple methods
 #@swagger_auto_schema(methods=['put', 'post'], request_body=UserSerializer)
 
-@swagger_auto_schema(method='get',operation_description="Returns a list of species objects annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
-@api_view(['GET'])
-def species(request):
-    species_list = DBtables.Species.objects.all()
-    json_species = serialize('jsonl', species_list, cls=LazyEncoder) 
-    
-    return HttpResponse(json_species)
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of all meta_value objects available.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def meta_values(request):
-    metavalues_list = DBtables.KeyValuePair.objects.all()
-    json_metavalues = serialize('jsonl', metavalues_list, cls=LazyEncoder)  
+    metaval_query_set = DBtables.KeyValuePair.objects.select_related('meta_key').select_related('ontology_term').all()
+    
+    metaval_dict = {}
 
-    return HttpResponse(json_metavalues)
+    for mv in metaval_query_set:
+        metaval_dict[mv.key_value_id] = {"meta_value_id":mv.key_value_id,
+                                         "interaction_id":mv.interaction_id,
+                                         "meta_key_id":mv.meta_key_id,
+                                         "meta_key_name":mv.meta_key.name,
+                                         "meta_value":mv.value,
+                                         "ontology_term_id":mv.ontology_term_id}
+        if mv.ontology_term_id:
+            metaval_dict[mv.key_value_id].update({"ontology_term": mv.ontology_term.description})
+    json_metavals = json.dumps(metaval_dict)
+    return HttpResponse(json_metavals)
+
 
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of all meta_key objects available.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def meta_keys(request):
-    print("meta_keys")
-    metakey_list = DBtables.MetaKey.objects.all()
-    json_metakeys = serialize('jsonl', metakey_list, cls=LazyEncoder)  
+    metakey_query_set = DBtables.MetaKey.objects.all()
+    metakey_dict = {}
 
+    for mk in metakey_query_set:
+        metakey_dict[mk.meta_key_id] = {"meta_key_id":mk.meta_key_id,
+                                        "name":mk.name,
+                                        "description":mk.description}
+    json_metakeys = json.dumps(metakey_dict)
     return HttpResponse(json_metakeys)
 
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of all Ensembl gene objects annotated with a molecular interaction.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
 def ensembl_gene(request):
-    gene_list = DBtables.EnsemblGene.objects.all()
-    json_genes = serialize('jsonl', gene_list, cls=LazyEncoder) 
-    
+    gene_query_set = DBtables.EnsemblGene.objects.select_related('species').all() 
+    gene_dict = {}
+
+    for g in gene_query_set:
+        gene_dict[g.ensembl_gene_id] = {"ensembl_gene_id":g.ensembl_gene_id,
+                                         "species_id":g.species_id,
+                                         "species_scientific_name":g.species.scientific_name,
+                                         "ensembl_stable_id":g.ensembl_stable_id }
+    json_genes = json.dumps(gene_dict)
     return HttpResponse(json_genes)
 
 
 
-@swagger_auto_schema(method='get',operation_description="Returns a list of all external databases from which we have imported molecular interaction.")
+@swagger_auto_schema(method='get',operation_description="+Returns a list of all external databases from which we have imported molecular interaction.")
 @api_view(['GET'])
 def source_dbs(request):
-    source_db_list = DBtables.SourceDb.objects.all()
-    fields_list = []
+    source_db_query_set = DBtables.SourceDb.objects.all()
+    
+    db_dict = {}
 
-    for db in source_db_list:
-        fields_list.append({db.label:db.external_db}) 
-    return HttpResponse(fields_list)
+    for db in source_db_query_set:
+        db_dict[db.source_db_id] = {"source_db_id":db.source_db_id,
+                                    "label":db.label,
+                                    "external_db":db.external_db,
+                                    "original_curator_db":db.original_curator_db}
+    json_dbs = json.dumps(db_dict)
+    return HttpResponse(json_dbs)
 
 @swagger_auto_schema(method='get',operation_description="Returns all interactor objects (uniquely identified by their curies).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
@@ -125,16 +224,17 @@ def interactors(request):
     interactors_dict = {}
 
     for ci in interactors_query_set:
-        interactors_dict[ci.curies] = {"curated_interactor_id":ci.curated_interactor_id,
-                                       "interactor_type":ci.interactor_type,
-                                       "name":ci.name,
-                                       "ensembl_gene_id":ci.ensembl_gene_id}
+        interactors_dict[ci.curated_interactor_id] = {"curated_interactor_id":ci.curated_interactor_id,
+                                                      "curies":ci.curies,
+                                                      "interactor_type":ci.interactor_type,
+                                                      "name":ci.name,
+                                                      "ensembl_gene_id":ci.ensembl_gene_id}
     json_interactors = json.dumps(interactors_dict)
     return HttpResponse(json_interactors)
 
 @swagger_auto_schema(method='get',operation_description="Returns all interactions listed by their primary_key (uniquely identified by a combination of interactor_1,interactor_2, DOI publication, and source_db).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
-def interactions(request):
+def interaction(request):
     interactions_query_set = DBtables.Interaction.objects.select_related('interactor_1').select_related('interactor_2').select_related('source_db').all()
     interactions_dict = {}
     for i in interactions_query_set:
@@ -166,6 +266,64 @@ def interactions_by_prodname(request):
                 species_gene_dict[prod_name] = [eg.ensembl_stable_id]
     json_species_genes = json.dumps(species_gene_dict)
     return HttpResponse(json_species_genes)
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactions (listed by their identifier) having the string passed as a parameter, contained in their meta_data as a key (ie.- 'disease').\nThe interactions returned will contain keys in their metadata that contain the specified string either in their name or their description. For instance, a search for 'disease' will match the meta_key name 'Disease name' but also the meta_key name 'Interaction phenotype' since its corresponding description 'Interaction phenotype/disease outcome' matches the query")
+@api_view(['GET'])
+def interactions_by_meta_key(request, meta_key):
+    keyval_query_set = DBtables.KeyValuePair.objects.select_related('interaction__interactor_1','interaction__interactor_2','interaction__source_db').select_related('meta_key').filter(Q(meta_key__name__icontains=meta_key)|Q(meta_key__description__icontains=meta_key))
+    interactions_dict = {}
+    for kv in keyval_query_set:
+        interactions_dict[kv.interaction.interaction_id] = {"interaction_id":kv.interaction.interaction_id,
+                                                            "interactor_1":kv.interaction.interactor_1.curies,
+                                                            "interactor_2":kv.interaction.interactor_2.curies,
+                                                            "doi":kv.interaction.doi,
+                                                            "source_db":kv.interaction.source_db.label,
+                                                            "meta_key_name":kv.meta_key.name,
+                                                            "meta_key_description":kv.meta_key.description,
+                                                            "meta_value":kv.value,
+                                                            }
+    json_interactions = json.dumps(interactions_dict)
+    return HttpResponse(json_interactions)
+
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactions (listed by their identifier) having the string passed as a parameter, contained in their meta_data as a value (ie.- 'PHIPO:0000010', which is the corresponding ontology id for alternaria leaf blotch).")
+@api_view(['GET'])
+def interactions_by_meta_value(request, meta_value):
+    keyval_query_set = DBtables.KeyValuePair.objects.select_related('interaction__interactor_1','interaction__interactor_2','interaction__source_db').select_related('meta_key').filter(value__icontains=meta_value)
+    interactions_dict = {}
+    for kv in keyval_query_set:
+        interactions_dict[kv.interaction.interaction_id] = {"interaction_id":kv.interaction.interaction_id,
+                                                            "interactor_1":kv.interaction.interactor_1.curies,
+                                                            "interactor_2":kv.interaction.interactor_2.curies,
+                                                            "doi":kv.interaction.doi,
+                                                            "source_db":kv.interaction.source_db.label,
+                                                            "meta_key_name":kv.meta_key.name,
+                                                            "meta_key_description":kv.meta_key.description,
+                                                            "meta_key_value":kv.value
+                                                            }
+    json_interactions = json.dumps(interactions_dict)
+    return HttpResponse(json_interactions)
+
+
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactions (listed by their identifier) having the first string passed as a parameter, contained in their meta_data as a key AND the second string passed as a parameter in their meta_data as a value (ie- key='disease' AND value='PHIPO:0000010').\nThe interactions returned will contain keys and values in their metadata that contain the specified strings either in their name or their description. For instance, a search for 'disease' will match the meta_key name 'Disease name' but also the meta_key name 'Interaction phenotype' since its corresponding description 'Interaction phenotype/disease outcome' matches the query")
+@api_view(['GET'])
+def interactions_by_meta_key_meta_value(request, meta_key,meta_value):
+    keyval_query_set = DBtables.KeyValuePair.objects.select_related('interaction__interactor_1','interaction__interactor_2','interaction__source_db').select_related('meta_key').filter(Q(meta_key__name__icontains=meta_key)|Q(meta_key__description__icontains=meta_key)).filter(value__icontains=meta_value)
+    interactions_dict = {};
+    for kv in keyval_query_set:
+        interactions_dict[kv.interaction.interaction_id] = {"interaction_id":kv.interaction.interaction_id,
+                                                            "interactor_1":kv.interaction.interactor_1.curies,
+                                                            "interactor_2":kv.interaction.interactor_2.curies,
+                                                            "doi":kv.interaction.doi,
+                                                            "source_db":kv.interaction.source_db.label,
+                                                            "meta_key_name":kv.meta_key.name,
+                                                            "meta_key_description":kv.meta_key.description,
+                                                            "meta_value":kv.value,
+                                                            }
+    json_interactions = json.dumps(interactions_dict)
+    return HttpResponse(json_interactions)
+
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of all the interactions available for a particular Ensembl gene (defined by its Ensembl stable identifier)")
 @api_view(['GET'])
@@ -241,7 +399,7 @@ def interactors_by_prodname(request):
     json_species_genes = json.dumps(species_gene_dict)
     return HttpResponse(json_species_genes)
 
-@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors for a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')")
+@swagger_auto_schema(method='get',operation_description="Returns all the ensembl_gene_identifiers from each molecular interactors for a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')")
 @api_view(['GET'])
 def interactors_by_specific_prodname(request, species_production_name):
     
@@ -260,7 +418,7 @@ def interactors_by_specific_prodname(request, species_production_name):
     json_species_genes = json.dumps(species_gene_dict)
     return HttpResponse(json_species_genes)
 
-@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors for a specific species scientific name passed as a parameter using the case non sensitive format: genus species (ie.- 'homo sapiens')")
+@swagger_auto_schema(method='get',operation_description="Returns all the ensembl_gene_identifiers from each molecular interactors for a specific species scientific name passed as a parameter using the case non sensitive format: genus species (ie.- 'homo sapiens')")
 @api_view(['GET'])
 def interactors_by_specific_scientific_name(request, species_scientific_name):
     
@@ -326,21 +484,6 @@ def get_gene_link(ensembl_gene):
     if 'UNDETERMINED' not in ensembl_gene:
         url_link = "https://ensemblgenomes.org/id/" + ensembl_gene
     return url_link
-
-def ontology(request):
-    return HttpResponse("Welcome! You're at the ontology response page.")
-
-def ontology_term(request):
-    return HttpResponse("Welcome! You're at the ontology_term response page.")
-
-class SpeciesViewSet(GenericViewSet,  # generic view functionality
-                     CreateModelMixin,  # handles POSTs
-                     RetrieveModelMixin,  # handles GETs for 1 Species
-                     UpdateModelMixin,  # handles PUTs and PATCHes
-                     ListModelMixin):  # handles GETs for many Species
-
-      serializer_class = SpeciesSerializer
-      queryset = DBtables.Species.objects.all()
 
 @api_view(['GET'])
 class EnsemblGeneViewSet(GenericViewSet,  # generic view functionality
