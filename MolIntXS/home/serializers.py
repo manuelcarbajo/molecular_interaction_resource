@@ -27,14 +27,17 @@ class InteractionSerializer(serializers.Serializer):
     label = serializers.CharField(source='source_db.label')
     interactor_1 = CuratedInteractorSerializer()
     interactor_2 = CuratedInteractorSerializer()
-
+    doi = serializers.CharField(style={'base_template': 'textarea.html'})
+    source_db = serializers.CharField(source='interaction.source_db.label')
+    
     class Meta:
         model = DBtables.Interaction
 
 class SpeciesSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+    species_id = serializers.IntegerField()
     ensembl_division = serializers.CharField(required=True, allow_blank=False, max_length=255)
     production_name = serializers.CharField(style={'base_template': 'textarea.html'})
+    scientific_name = serializers.CharField(style={'base_template': 'textarea.html'})
     taxon_id = serializers.IntegerField(read_only=True)
 
     class Meta:
