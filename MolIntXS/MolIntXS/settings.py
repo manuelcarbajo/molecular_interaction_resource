@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'drf_yasg',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -56,6 +57,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'MolIntXS.urls'
+APPEND_SLASH = True
 
 TEMPLATES = [
     {
@@ -75,7 +77,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'MolIntXS.wsgi.application'
 
-
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
+}
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
@@ -113,8 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False
 }
-
-
+FORCE_SCRIPT_NAME = '/'
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
