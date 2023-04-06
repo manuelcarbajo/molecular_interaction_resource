@@ -27,7 +27,7 @@ class Species(models.Model):
     taxon_id = models.IntegerField(unique=True)
 
     def __str__(self):
-        return 'id: {}, division: {}, prod_name: {}, scientific_name: {}, taxon_id: {}'.format(self.species_id,self.ensembl_division,self.production_name,self.scientific_name,self.taxon_id)
+        return 'id: {}, division: {}, production_name: {}, scientific_name: {}, taxon_id: {}'.format(self.species_id,self.ensembl_division,self.production_name,self.scientific_name,self.taxon_id)
         #return ('species:', str(self.species_id), '; division:', self.ensembl_division, '; prod_name:',self.production_name, '; taxon_id:', str(self.taxon_id))
 
     class Meta:
