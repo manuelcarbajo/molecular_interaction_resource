@@ -12,23 +12,21 @@ class LazyEncoder(DjangoJSONEncoder):
         return super().default(obj)
 
 class CuratedInteractorSerializer(serializers.Serializer):
-    prod_name = serializers.CharField(source='ensembl_gene.species.production_name')
-    division = serializers.CharField(source='ensembl_gene.species.ensembl_division')
-    ens_gene = serializers.CharField(source='ensembl_gene.ensembl_stable_id')
+    prod_name = serializers.CharField(allow_null=True,source='ensembl_gene.species.production_name')
+    division = serializers.CharField(allow_null=True,source='ensembl_gene.species.ensembl_division')
+    ens_gene = serializers.CharField(allow_null=True,source='ensembl_gene.ensembl_stable_id')
     curies =serializers.CharField(read_only=True)
     interactor_type = serializers.CharField()
-
 
     class Meta:
         model = DBtables.CuratedInteractor
 
-
 class InteractionSerializer(serializers.Serializer):
-    label = serializers.CharField(source='source_db.label')
-    interactor_1 = CuratedInteractorSerializer()
-    interactor_2 = CuratedInteractorSerializer()
+    interaction_id = serializers.IntegerField()
+    interactor_1 = serializers.CharField(source='interactor_1.curies')
+    interactor_2 = serializers.CharField(source='interactor_2.curies')
     doi = serializers.CharField(style={'base_template': 'textarea.html'})
-    source_db = serializers.CharField(source='interaction.source_db.label')
+    source_db = serializers.CharField(source='source_db.label')
     
     class Meta:
         model = DBtables.Interaction

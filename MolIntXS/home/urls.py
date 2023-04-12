@@ -24,6 +24,7 @@ urlpatterns = [
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     
     path('meta_values', views.meta_values, name='meta_values'),
+    path('interaction', views.InteractionList.as_view(), name='interactionList'),
     path('interactions', views.interaction, name='interaction'),
     path('interactions/meta_key/<str:meta_key>', views.interactions_by_meta_key, name='interactions_by_meta_key'),
     path('interactions/meta_value/<str:meta_value>', views.interactions_by_meta_value, name='interactions_by_meta_value'),
