@@ -25,9 +25,57 @@ from datetime import datetime
 from django.db.models import Q, Prefetch
 
 
+class InteractorFilter(django_filters.FilterSet):
+    """
+    name = django_filters.CharFilter(method='name_filter', lookup_expr='icontains')
+    ensembl_gene = django_filters.CharFilter(method='ensembl_gene_filter', lookup_expr='icontains',label="ensembl gene")
+    interactor_id = django_filters.NumberFilter(field_name='interaction_id')
+    species_ensembl_name = django_filters.CharFilter(method='species_ensembl_name_filter', field_name='production_name')
+    species_scientific_name = django_filters.CharFilter(method='species_scientific_name_filter', field_name='scientific_name')
+    
+    class Meta:
+        model = DBtables.Interaction
+        fields = ['name','ensembl_gene','interactor_id','production_name','scientific_name']
+
+    def source_db_filter(self,queryset,source_db_id,value):
+        return queryset.filter(source_db__label__icontains=value)
+    
+    def meta_value_filter(self,queryset,meta_value,value):
+        return queryset.filter(keyvaluepair__value__icontains=value)
+    
+    def meta_key_filter(self,queryset,meta_key,value):
+        return queryset.filter(keyvaluepair__meta_key__name__icontains=value)
+
+    def interaction_id_filter(self,queryset,interaction_id,value):
+        return queryset.filter(interaction_id=value)
+"""
+class InteractorList(generics.ListAPIView):
+   """
+   queryset = DBtables.Interaction.objects.select_related('source_db').select_related('interactor_1').select_related('interactor_2').prefetch_related(
+            Prefetch('keyvaluepair_set', queryset=KeyValuePair.objects.select_related('meta_key'))
+        )
+    filterset_class = InteractionFilter
+    serializer_class = InteractionSerializer
+    
+    def get(self,request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        response = serializer.data
+        return Response(response) 
+
+    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15').\n")
+    
+    def get(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+
+"""
 class InteractionFilter(django_filters.FilterSet):
-    meta_key = django_filters.CharFilter(method='meta_key_filter', lookup_expr='icontains')
-    meta_value = django_filters.CharFilter(method='meta_value_filter', lookup_expr='icontains')
+    meta_key = django_filters.CharFilter(method='meta_key_filter', lookup_expr='icontains', label="meta key")
+    meta_value = django_filters.CharFilter(method='meta_value_filter', lookup_expr='icontains',label="meta value")
     interaction_id = django_filters.NumberFilter(field_name='interaction_id')
     source_db = django_filters.CharFilter(method='source_db_filter', field_name='source_db_id')
 
@@ -60,7 +108,8 @@ class InteractionList(generics.ListAPIView):
         response = serializer.data
         return Response(response) 
 
-    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:\n\n\t\t* ?meta_key_name={string} \n\t\t\tReturns all the information available for interactions with key value pairs with a matching meta key name passed as a parameter using the case non sensitive format (ie.- '/interactions/?meta_key_name=strain').\n\n\t\t* ?meta_key_value={string} \n\t\t\tReturns a list of interactions annotated with key value pairs loosely matching a specific value passed as a parameter using the case non sensitive format (ie.- '/interactions/?meta_key_value=PHIPO:0000010').\n\n\t\t* ?key_value_interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions/?key_value_interaction_id=15').\n")
+    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15').\n")
+    
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
