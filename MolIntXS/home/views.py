@@ -29,13 +29,13 @@ class CuratedInteractorFilter(django_filters.FilterSet):
   
     name = django_filters.CharFilter(method='name_filter', lookup_expr='icontains')
     ensembl_gene = django_filters.CharFilter(method='ensembl_gene_filter', lookup_expr='icontains',label='ensembl gene')
-    interactor_id = django_filters.NumberFilter(field_name='interaction_id', label='interactor id')
+    interactor_id = django_filters.NumberFilter(method='interactor_id_filter',field_name='interactor_id', label='interactor id')
     production_name = django_filters.CharFilter(method='species_ensembl_name_filter', label='species ensembl name (production name)', field_name='production_name')
     scientific_name = django_filters.CharFilter(method='species_scientific_name_filter', field_name='scientific_name', label='species scientific name')
     
     class Meta:
         model = DBtables.CuratedInteractor
-        fields = ['name','ensembl_gene','interactor_id','production_name','scientific_name']
+        fields = ['name','ensembl_gene','curated_interactor_id','production_name','scientific_name']
 
     def name_filter(self,queryset,name,value):
         return queryset.filter(name__icontains=value)
@@ -44,10 +44,13 @@ class CuratedInteractorFilter(django_filters.FilterSet):
         return queryset.filter(ensembl_gene__ensembl_stable_id__icontains=value)
     
     def species_ensembl_name_filter(self,queryset,production_name,value):
-        return queryset.filter(ensembl_gene__species_production_name__icontains=value)
+        return queryset.filter(ensembl_gene__species__production_name__icontains=value)
+    
+    def species_scientific_name_filter(self,queryset,scientific_name,value):
+        return queryset.filter(ensembl_gene__species__scientific_name__icontains=value)
 
     def interactor_id_filter(self,queryset,interactor_id,value):
-        return queryset.filter(interactor_id=value)
+        return queryset.filter(curated_interactor_id=value)
 
 class CuratedInteractorList(generics.ListAPIView):
 
@@ -190,11 +193,6 @@ def species_by_scientific_name(request, species_scientific_name):
     json_species = json.dumps(species_dict)
     return HttpResponse(json_species)
 
-# 'method' can be used to customize a single HTTP method of a view
-#@swagger_auto_schema(method='get', manual_parameters=[test_param], responses={200: user_response})
-# 'methods' can be used to apply the same modification to multiple methods
-#@swagger_auto_schema(methods=['put', 'post'], request_body=UserSerializer)
-
 
 @swagger_auto_schema(method='get',operation_description="Returns a list of all meta_value objects available.\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
@@ -245,7 +243,25 @@ def ensembl_gene(request):
     json_genes = json.dumps(gene_dict)
     return HttpResponse(json_genes)
 
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors (listed by their Ensembl species name, also known as production name).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+@api_view(['GET'])
+def ensembl_gene_by_prodname(request):
+    
+    species_genes_List = []
+    ensembl_gene_query_set = DBtables.EnsemblGene.objects.select_related('species')
 
+    species_gene_dict = {}
+    for eg in ensembl_gene_query_set:
+        if 'UNDETERMINED' not in eg.ensembl_stable_id:
+            prod_name = eg.species.production_name
+            if prod_name in species_gene_dict:
+                genes_list = species_gene_dict[prod_name]
+                genes_list.append(eg.ensembl_stable_id)
+                species_gene_dict[prod_name] = genes_list
+            else:
+                species_gene_dict[prod_name] = [eg.ensembl_stable_id]
+    json_species_genes = json.dumps(species_gene_dict)
+    return HttpResponse(json_species_genes)
 
 @swagger_auto_schema(method='get',operation_description="+Returns a list of all external databases from which we have imported molecular interaction.")
 @api_view(['GET'])
@@ -276,6 +292,88 @@ def interactors(request):
                                                       "ensembl_gene_id":ci.ensembl_gene_id}
     json_interactors = json.dumps(interactors_dict)
     return HttpResponse(json_interactors)
+
+@swagger_auto_schema(method='get',operation_description="Returns the interactors identified by the integer passed as a parameter")
+@api_view(['GET'])
+def interactor_id(request, curated_interactor_id):
+    
+    interactors_query_set = DBtables.CuratedInteractor.objects.filter(curated_interactor_id=curated_interactor_id)
+    interactors_dict = {}
+    
+    for i in interactors_query_set:
+        interactors_dict[i.curated_interactor_id] = {"curated_interactor_id":i.curated_interactor_id,
+                                                     "interactor_type":i.interactor_type,
+                                                     "curies":i.curies,
+                                                     "name":i.name,
+                                                     "ensembl_gene_id":i.ensembl_gene_id}
+    json_interactors = json.dumps(interactors_dict)
+    return HttpResponse(json_interactors)
+
+@swagger_auto_schema(method='get',operation_description="Returns the interactor with a curies name matching the string passed as a parameter. A normal name can also be passed (ie.- 'uniprot:Q6KC79' or 'Q6KC79' will return the same result)  ")
+@api_view(['GET'])
+def interactor_name(request, interactor_name):
+    
+    interactors_query_set = DBtables.CuratedInteractor.objects.filter(curies__icontains=interactor_name)
+    interactors_dict = {}
+    
+    for i in interactors_query_set:
+        interactors_dict[i.curated_interactor_id] = {"curated_interactor_id":i.curated_interactor_id,
+                                                     "interactor_type":i.interactor_type,
+                                                     "curies":i.curies,
+                                                     "name":i.name,
+                                                     "ensembl_gene_id":i.ensembl_gene_id}
+    json_interactors = json.dumps(interactors_dict)
+    return HttpResponse(json_interactors)
+
+
+@swagger_auto_schema(method='get',operation_description="Returns the interactors associated to a specific ensembl_gene passed as a string parameter")
+@api_view(['GET'])
+def interactor_ensembl_gene(request, ensembl_gene):
+    
+    interactors_query_set = DBtables.CuratedInteractor.objects.filter(ensembl_gene__ensembl_stable_id=ensembl_gene)
+    interactors_dict = {}
+    
+    for i in interactors_query_set:
+        interactors_dict[i.curated_interactor_id] = {"curated_interactor_id":i.curated_interactor_id,
+                                                     "interactor_type":i.interactor_type,
+                                                     "curies":i.curies,
+                                                     "name":i.name,
+                                                     "ensembl_gene_id":i.ensembl_gene_id}
+    json_interactors = json.dumps(interactors_dict)
+    return HttpResponse(json_interactors)
+
+@swagger_auto_schema(method='get',operation_description="Returns all the interactors tha belong to a specific species identified by its Ensembl name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')")
+@api_view(['GET'])
+def interactor_by_specific_prodname(request, production_name):
+    
+    interactors_query_set = DBtables.CuratedInteractor.objects.filter(ensembl_gene__species__production_name__icontains=production_name)
+    interactors_dict = {}
+    
+    for i in interactors_query_set:
+        interactors_dict[i.curated_interactor_id] = {"curated_interactor_id":i.curated_interactor_id,
+                                                     "interactor_type":i.interactor_type,
+                                                     "curies":i.curies,
+                                                     "name":i.name,
+                                                     "ensembl_gene_id":i.ensembl_gene_id}
+    json_interactors = json.dumps(interactors_dict)
+    return HttpResponse(json_interactors)
+
+@swagger_auto_schema(method='get',operation_description="Returns all the interactors tha belong to a specific species identified by its scientific name, passed as a parameter using the case non sensitive format: genus species (ie.- 'homo sapiens')")
+@api_view(['GET'])
+def interactor_by_scientific_name(request, scientific_name):
+    
+    interactors_query_set = DBtables.CuratedInteractor.objects.filter(ensembl_gene__species__scientific_name__icontains=scientific_name)
+    interactors_dict = {}
+    
+    for i in interactors_query_set:
+        interactors_dict[i.curated_interactor_id] = {"curated_interactor_id":i.curated_interactor_id,
+                                                     "interactor_type":i.interactor_type,
+                                                     "curies":i.curies,
+                                                     "name":i.name,
+                                                     "ensembl_gene_id":i.ensembl_gene_id}
+    json_interactors = json.dumps(interactors_dict)
+    return HttpResponse(json_interactors)
+
 
 @swagger_auto_schema(method='get',operation_description="Returns all interactions listed by their primary_key (uniquely identified by a combination of interactor_1,interactor_2, DOI publication, and source_db).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
 @api_view(['GET'])
@@ -424,8 +522,11 @@ def display_by_gene(request,ens_stbl_id):
     return HttpResponse(json_response)
 
 
-@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors (listed by their Ensembl species name, also known as production name).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
-@api_view(['GET'])
+
+
+#USED BY ENSEMBL-WEB!
+#@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors (listed by their Ensembl species name, also known as production name).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
+#@api_view(['GET'])
 def interactors_by_prodname(request):
     
     species_genes_List = []
@@ -446,7 +547,7 @@ def interactors_by_prodname(request):
 
 @swagger_auto_schema(method='get',operation_description="Returns all the ensembl_gene_identifiers from each molecular interactors for a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')")
 @api_view(['GET'])
-def interactors_by_specific_prodname(request, species_production_name):
+def ensembl_gene_by_specific_prodname(request, species_production_name):
     
     species_genes_List = []
     ensembl_gene_query_set = DBtables.EnsemblGene.objects.select_related('species').filter(species__production_name__icontains=species_production_name).exclude(ensembl_stable_id__icontains='UNDETERMINED')
@@ -465,7 +566,7 @@ def interactors_by_specific_prodname(request, species_production_name):
 
 @swagger_auto_schema(method='get',operation_description="Returns all the ensembl_gene_identifiers from each molecular interactors for a specific species scientific name passed as a parameter using the case non sensitive format: genus species (ie.- 'homo sapiens')")
 @api_view(['GET'])
-def interactors_by_specific_scientific_name(request, species_scientific_name):
+def ensembl_gene_by_specific_scientific_name(request, species_scientific_name):
     
     species_genes_List = []
     ensembl_gene_query_set = DBtables.EnsemblGene.objects.select_related('species').filter(species__scientific_name__icontains=species_scientific_name).exclude(ensembl_stable_id__icontains='UNDETERMINED')
