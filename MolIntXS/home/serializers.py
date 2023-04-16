@@ -12,6 +12,7 @@ class LazyEncoder(DjangoJSONEncoder):
         return super().default(obj)
 
 class CuratedInteractorSerializer(serializers.Serializer):
+    curated_interactor_id = serializers.IntegerField()
     prod_name = serializers.CharField(allow_null=True,source='ensembl_gene.species.production_name')
     division = serializers.CharField(allow_null=True,source='ensembl_gene.species.ensembl_division')
     ens_gene = serializers.CharField(allow_null=True,source='ensembl_gene.ensembl_stable_id')

@@ -37,10 +37,12 @@ urlpatterns = [
     path('source_dbs', views.source_dbs, name='source_dbs'),
     path('ensembl_gene', views.ensembl_gene, name='ensembl_gene'),
     path('interactions_by_prodname', views.interactions_by_prodname, name='interactions_by_prodname'),
-    path('interactors', views.interactors, name='interactors'),
-    path('interactors/ensembl_name', views.interactors_by_prodname, name='interactors_by_prodname'),
-    path('interactors/ensembl_name/<str:species_production_name>', views.interactors_by_specific_prodname, name='interactors_by_specific_prodname'),
-    path('interactors/scientific_name/<str:species_scientific_name>', views.interactors_by_specific_scientific_name, name='interactors_by_specific_scientific_name'),
+    
+    path('interactor', views.CuratedInteractorList.as_view(), name='interactorList'),
+    #path('interactors', views.interactors, name='interactors'),
+    path('interactor/ensembl_name', views.interactors_by_prodname, name='interactors_by_prodname'),
+    path('interactor/ensembl_name/<str:species_production_name>', views.interactors_by_specific_prodname, name='interactors_by_specific_prodname'),
+    path('interactor/scientific_name/<str:species_scientific_name>', views.interactors_by_specific_scientific_name, name='interactors_by_specific_scientific_name'),
     path('display_by_gene/<str:ens_stbl_id>', views.display_by_gene, name='display_by_gene'),
     re_path(r'^.*$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger_ui'),
     ]

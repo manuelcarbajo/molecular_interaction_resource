@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework import generics, status
 import home.models as DBtables
 from .models import Species, EnsemblGene, MetaKey, KeyValuePair
-from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer
+from home.serializers import SpeciesSerializer, InteractionSerializer, EnsemblGeneSerializer, CuratedInteractorSerializer
 from .serializers import LazyEncoder
 import json
 from json import JSONEncoder
@@ -25,45 +25,42 @@ from datetime import datetime
 from django.db.models import Q, Prefetch
 
 
-class InteractorFilter(django_filters.FilterSet):
-    """
+class CuratedInteractorFilter(django_filters.FilterSet):
+  
     name = django_filters.CharFilter(method='name_filter', lookup_expr='icontains')
-    ensembl_gene = django_filters.CharFilter(method='ensembl_gene_filter', lookup_expr='icontains',label="ensembl gene")
-    interactor_id = django_filters.NumberFilter(field_name='interaction_id')
-    species_ensembl_name = django_filters.CharFilter(method='species_ensembl_name_filter', field_name='production_name')
-    species_scientific_name = django_filters.CharFilter(method='species_scientific_name_filter', field_name='scientific_name')
+    ensembl_gene = django_filters.CharFilter(method='ensembl_gene_filter', lookup_expr='icontains',label='ensembl gene')
+    interactor_id = django_filters.NumberFilter(field_name='interaction_id', label='interactor id')
+    production_name = django_filters.CharFilter(method='species_ensembl_name_filter', label='species ensembl name (production name)', field_name='production_name')
+    scientific_name = django_filters.CharFilter(method='species_scientific_name_filter', field_name='scientific_name', label='species scientific name')
     
     class Meta:
-        model = DBtables.Interaction
+        model = DBtables.CuratedInteractor
         fields = ['name','ensembl_gene','interactor_id','production_name','scientific_name']
 
-    def source_db_filter(self,queryset,source_db_id,value):
-        return queryset.filter(source_db__label__icontains=value)
+    def name_filter(self,queryset,name,value):
+        return queryset.filter(name__icontains=value)
     
-    def meta_value_filter(self,queryset,meta_value,value):
-        return queryset.filter(keyvaluepair__value__icontains=value)
+    def ensembl_gene_filter(self,queryset,ensembl_gene,value):
+        return queryset.filter(ensembl_gene__ensembl_stable_id__icontains=value)
     
-    def meta_key_filter(self,queryset,meta_key,value):
-        return queryset.filter(keyvaluepair__meta_key__name__icontains=value)
+    def species_ensembl_name_filter(self,queryset,production_name,value):
+        return queryset.filter(ensembl_gene__species_production_name__icontains=value)
 
-    def interaction_id_filter(self,queryset,interaction_id,value):
-        return queryset.filter(interaction_id=value)
-"""
-class InteractorList(generics.ListAPIView):
-   """
-   queryset = DBtables.Interaction.objects.select_related('source_db').select_related('interactor_1').select_related('interactor_2').prefetch_related(
-            Prefetch('keyvaluepair_set', queryset=KeyValuePair.objects.select_related('meta_key'))
-        )
-    filterset_class = InteractionFilter
-    serializer_class = InteractionSerializer
+    def interactor_id_filter(self,queryset,interactor_id,value):
+        return queryset.filter(interactor_id=value)
+
+class CuratedInteractorList(generics.ListAPIView):
+
+    queryset = DBtables.CuratedInteractor.objects.select_related('ensembl_gene').select_related('ensembl_gene__species').all()
+    filterset_class = CuratedInteractorFilter
+    serializer_class = CuratedInteractorSerializer
     
-    def get(self,request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
-        response = serializer.data
-        return Response(response) 
+        return Response(serializer.data)
 
-    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15').\n")
+    @swagger_auto_schema(operation_description="* /interactor \n\t\t\tReturns a list of interactor objects involved in a molecular interaction.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interactor?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?name={string} \n\t\t\tReturns a list of all interactors with case insensitive matches to the provided string (ie.- '/interactor?name=P51587').\n\n\t\t* ?ensembl_gene={string} \n\t\t\tReturns a list of all interactors annotated to the ensembl gene identifier provided as a string (ie.- '/interactors?ensembl_gene=ENSG00000139618).\n\n\t\t* ?production_name={string} \n\t\t Returns a list of all interactors annotated to a given species identified by its ensembl name (aka production_name) (ie.-/interactor?production_name=homo_sapiens) \n\n\t\t* ?scientific_name={string} \n\t\t Returns a list of all interactors annotated to a given species identified by its scientific name (ie.- '/interactor?scientific_name=Homo sapiens')\n\n\t\t* ?interactor_id={integer} \n\t\t\tReturns the interactor identified by the integer passed as a parameter(ie.- '/interactor?interactor_id=15').\n")
     
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -71,8 +68,6 @@ class InteractorList(generics.ListAPIView):
         return Response(serializer.data)
 
 
-
-"""
 class InteractionFilter(django_filters.FilterSet):
     meta_key = django_filters.CharFilter(method='meta_key_filter', lookup_expr='icontains', label="meta key")
     meta_value = django_filters.CharFilter(method='meta_value_filter', lookup_expr='icontains',label="meta value")
@@ -102,12 +97,6 @@ class InteractionList(generics.ListAPIView):
     filterset_class = InteractionFilter
     serializer_class = InteractionSerializer
     
-    def get(self,request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        response = serializer.data
-        return Response(response) 
-
     @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15').\n")
     
     def get(self, request, *args, **kwargs):
@@ -140,7 +129,7 @@ class SpeciesList(generics.ListAPIView):
     filterset_class = SpeciesFilter
     serializer_class = SpeciesSerializer
 
-    @swagger_auto_schema(operation_description="* /species \n\t\t\tReturns a list of species objects annotated with a molecular interaction.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:\n\n\t\t* ?species_id={integer} \n\t\t\tReturns all the information available for the species with the provided integer identifier(ie.- '/species/?species_id=15').\n\n\t\t* ?scientific_name={string} \n\t\t\tReturns a list of species loosely matching a specific scientific name passed as a parameter using the case non sensitive format: genus species (ie.- '/species/?scientific_name=homo sapiens')\n\n\t\t * ?production_name={string} \n\t\t\tReturns a list of species loosely matching a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- 'homo_sapiens')\n")
+    @swagger_auto_schema(operation_description="* /species \n\t\t\tReturns a list of species objects annotated with a molecular interaction.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:\n\n\t\t* ?species_id={integer} \n\t\t\tReturns all the information available for the species with the provided integer identifier(ie.- '/species?species_id=15').\n\n\t\t* ?scientific_name={string} \n\t\t\tReturns a list of species loosely matching a specific scientific name passed as a parameter using the case non sensitive format: genus species (ie.- '/species?scientific_name=homo sapiens')\n\n\t\t * ?production_name={string} \n\t\t\tReturns a list of species loosely matching a specific Ensembl species name (also known as production name) passed as a parameter using the case non sensitive format: genus_species (ie.- '/species?production_name=homo_sapiens')\n")
     def get(self,request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
