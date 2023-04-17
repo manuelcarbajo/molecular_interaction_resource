@@ -35,7 +35,7 @@ class CuratedInteractorFilter(django_filters.FilterSet):
     
     class Meta:
         model = DBtables.CuratedInteractor
-        fields = ['name','ensembl_gene','curated_interactor_id','production_name','scientific_name']
+        fields = ['name','ensembl_gene','interactor_id','production_name','scientific_name']
 
     def name_filter(self,queryset,name,value):
         return queryset.filter(name__icontains=value)
@@ -76,10 +76,12 @@ class InteractionFilter(django_filters.FilterSet):
     meta_value = django_filters.CharFilter(method='meta_value_filter', lookup_expr='icontains',label="meta value")
     interaction_id = django_filters.NumberFilter(field_name='interaction_id')
     source_db = django_filters.CharFilter(method='source_db_filter', field_name='source_db_id')
-
+    interactor_1 = django_filters.NumberFilter(field_name='interactor_1')
+    interactor_2 = django_filters.NumberFilter(field_name='interactor_2')
+    
     class Meta:
         model = DBtables.Interaction
-        fields = ['source_db','meta_value','meta_key','interaction_id']
+        fields = ['interaction_id','interactor_1','interactor_2','source_db','meta_value','meta_key']
 
     def source_db_filter(self,queryset,source_db_id,value):
         return queryset.filter(source_db__label__icontains=value)
@@ -100,7 +102,7 @@ class InteractionList(generics.ListAPIView):
     filterset_class = InteractionFilter
     serializer_class = InteractionSerializer
     
-    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15').\n")
+    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15'). \n\n\t\t* ?interactor_1={integer} \n\t\t\tReturns a list of interactions involving a specific interactor_1 identifier passed as a parameter as an integer(ie.- '/interactions?interactor_1=116').  \n\n\t\t* ?interactor_2={integer} \n\t\t\tReturns a list of interactions involving a specific interactor_2 identifier passed as a parameter as an integer(ie.- '/interactions?interactor_2=116').  \n")
     
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -471,6 +473,7 @@ def interactions_by_meta_key_meta_value(request, meta_key,meta_value):
 @swagger_auto_schema(method='get',operation_description="Returns a list of all the interactions available for a particular Ensembl gene (defined by its Ensembl stable identifier)")
 @api_view(['GET'])
 def display_by_gene(request,ens_stbl_id):
+    
     interactions_by_queried_gene = DBtables.Interaction.objects.filter(Q(interactor_1__ensembl_gene_id__ensembl_stable_id=ens_stbl_id) | Q(interactor_2__ensembl_gene_id__ensembl_stable_id=ens_stbl_id))
     interactions_results_dict = {"interactor_1":{},"interactors_2":[]}
     interactor1_dict = {}
@@ -479,20 +482,43 @@ def display_by_gene(request,ens_stbl_id):
     interactors2_list = [] 
     
     for intrctn in interactions_by_queried_gene:
-        if not interactions_results_dict["interactor_1"]:
-            InteractionsByGeneList = []
+        
+        #First, sort the order of the two interactors to display always the queried gene as interactor_1
+        if intrctn.interactor_1.ensembl_gene.ensembl_stable_id==ens_stbl_id:
             interactor1_type = intrctn.interactor_1.interactor_type
             species1_name = intrctn.interactor_1.ensembl_gene.species.scientific_name 
             identifier1 = intrctn.interactor_1.curies
             ens_stbl_id_1 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id
+        
+            interactor2_type = intrctn.interactor_2.interactor_type
+            identifier2 = intrctn.interactor_2.curies
+            interactor2_name = intrctn.interactor_2.name
+            if interactor2_type != 'synthetic':
+                species2_name = intrctn.interactor_2.ensembl_gene.species.scientific_name 
+                ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id 
+        elif intrctn.interactor_2.ensembl_gene.ensembl_stable_id==ens_stbl_id:
+            interactor1_type = intrctn.interactor_2.interactor_type
+            species1_name = intrctn.interactor_2.ensembl_gene.species.scientific_name 
+            identifier1 = intrctn.interactor_2.curies
+            ens_stbl_id_1 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id
+ 
+            interactor2_type = intrctn.interactor_1.interactor_type
+            identifier2 = intrctn.interactor_1.curies
+            interactor2_name = intrctn.interactor_1.name
+            if interactor2_type != 'synthetic':
+                species2_name = intrctn.interactor_1.ensembl_gene.species.scientific_name 
+                ens_stbl_id_2 = intrctn.interactor_1.ensembl_gene.ensembl_stable_id 
+
+        #build interactor_1 dictionary
+        if not interactions_results_dict["interactor_1"]:
+            InteractionsByGeneList = []
             ensembl_gene_link_1 = get_gene_link(ens_stbl_id_1)
             identifier1_url = get_identifier_link(identifier1)
 
             interactor1_dict = {"type":"species","name": species1_name,"gene": {"name":ens_stbl_id_1,"url":ensembl_gene_link_1},"interactor":interactor1_type,"identifier": {"name":identifier1,"url":identifier1_url}}
             interactions_results_dict["interactor_1"] = interactor1_dict
       
-        interactor2_type = intrctn.interactor_2.interactor_type
-        identifier2 = intrctn.interactor_2.curies
+        #build interactor_2 dictionary
         if 'UNDETERMINED' in identifier2:
             identifier2 = 'UNDETERMINED';
         identifier2_url = get_identifier_link(identifier2)
@@ -500,29 +526,26 @@ def display_by_gene(request,ens_stbl_id):
         source_db_link = get_source_db_link(identifier1, source_db)
         interactor2_dict = {}
         if interactor2_type == 'synthetic':
-            interactor2_name = intrctn.interactor_2.name
             interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB": {"name":source_db,"url":source_db_link}}
         else:
-            species2_name = intrctn.interactor_2.ensembl_gene.species.scientific_name 
-            ens_stbl_id_2 = intrctn.interactor_2.ensembl_gene.ensembl_stable_id 
             if 'UNDETERMINED' in ens_stbl_id_2:
                 ens_stbl_id_2 = 'UNDETERMINED'
             ensembl_gene_link_2 = get_gene_link(ens_stbl_id_2)
             interactor2_dict = {"type":"species", "name": species2_name,"gene": {"name":ens_stbl_id_2,"url":ensembl_gene_link_2},"interactor":interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB":{"name":source_db,"url":source_db_link}}
         
+        #build associated metadata
         metadata_list = get_metadata_list(intrctn.interaction_id,source_db_link)
         interactor2_dict["metadata"] = metadata_list
         interactors2_list.append(interactor2_dict)
 
+    #wrap up
     if interactor1_dict != {}:
         interactions_results_dict = {"interactor_1":interactor1_dict, "interactor_2":interactors2_list}
     else:
         interactions_results_dict = {}
+
     json_response = json.dumps(interactions_results_dict)
     return HttpResponse(json_response)
-
-
-
 
 #USED BY ENSEMBL-WEB!
 #@swagger_auto_schema(method='get',operation_description="Returns all molecular interactors (listed by their Ensembl species name, also known as production name).\nThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.")
