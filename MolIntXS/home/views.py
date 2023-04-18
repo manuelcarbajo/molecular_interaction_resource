@@ -483,6 +483,9 @@ def display_by_gene(request,ens_stbl_id):
     
     for intrctn in interactions_by_queried_gene:
         
+        source_db = intrctn.source_db.label
+        source_db_link = get_source_db_link(intrctn.interactor_1.curies, source_db)
+
         #First, sort the order of the two interactors to display always the queried gene as interactor_1
         if intrctn.interactor_1.ensembl_gene.ensembl_stable_id==ens_stbl_id:
             interactor1_type = intrctn.interactor_1.interactor_type
@@ -522,8 +525,8 @@ def display_by_gene(request,ens_stbl_id):
         if 'UNDETERMINED' in identifier2:
             identifier2 = 'UNDETERMINED';
         identifier2_url = get_identifier_link(identifier2)
-        source_db = intrctn.source_db.label
-        source_db_link = get_source_db_link(identifier1, source_db)
+        #source_db = intrctn.source_db.label
+        #source_db_link = get_source_db_link(identifier1, source_db)
         interactor2_dict = {}
         if interactor2_type == 'synthetic':
             interactor2_dict = {"type":"other", "name": interactor2_name,"interactor": interactor2_type,"identifier":{"name":identifier2,"url":identifier2_url},"source_DB": {"name":source_db,"url":source_db_link}}
