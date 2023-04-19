@@ -25,6 +25,45 @@ from datetime import datetime
 from django.db.models import Q, Prefetch
 
 
+
+class EnsemblGeneFilter(django_filters.FilterSet):
+  
+    ensembl_gene_id = django_filters.NumberFilter( field_name='ensembl_gene_id')
+    ensembl_stable_id = django_filters.CharFilter(method='ensembl_gene_filter',label='ensembl stable id', lookup_expr='icontains')
+    ensembl_name = django_filters.CharFilter(method='species_ensembl_name_filter', label='species ensembl name (production name)', field_name='ensembl_name')
+    scientific_name = django_filters.CharFilter(method='species_scientific_name_filter', field_name='scientific_name', label='species scientific name')
+    
+    class Meta:
+        model = DBtables.EnsemblGene
+        fields = ['ensembl_gene_id','ensembl_stable_id','ensembl_name','scientific_name']
+
+    
+    def ensembl_gene_filter(self,queryset,ensembl_stable_id,value):
+        return queryset.filter(ensembl_stable_id__icontains=value)
+    
+    def species_ensembl_name_filter(self,queryset,production_name,value):
+        return queryset.filter(species__production_name__icontains=value)
+    
+    def species_scientific_name_filter(self,queryset,scientific_name,value):
+        return queryset.filter(species__scientific_name__icontains=value)
+
+    def interactor_id_filter(self,queryset,interactor_id,value):
+        return queryset.filter(curated_interactor_id=value)
+
+class EnsemblGeneList(generics.ListAPIView):
+    queryset = DBtables.EnsemblGene.objects.select_related('species').all()
+    filterset_class = EnsemblGeneFilter
+    serializer_class = EnsemblGeneSerializer
+    
+    @swagger_auto_schema(operation_description="* /ensembl_gene \n\t\t\tReturns a list of ensembl_genes associated to interactions data.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /ensembl_gene?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?ensembl_name={string} \n\t\t\tReturns a list of all genes belonging to one or several genomes with the ensembl name (aka production name) that insensitive matches the provided string (ie.- '/ensembl_gene?ensembl_name=zymoseptoria').\n\n\t\t* ?scientific_name={string} \n\t\t\tReturns a list of all genes belonging to one or several genomes with the scientific name that insensitive matches the provided string (ie.- '/ensembl_gene?scientific_name=zymoseptoria tritici').t\t* ?ensembl_stable_id={integer} \n\t\t\tReturns a list of interactions involving a specific interactor_1 identifier passed as a parameter as an integer(ie.- '/interactions?interactor_1=116').  \n\n\t\t* ?interactor_2={integer} \n\t\t\tReturns a list of interactions involving a specific interactor_2 identifier passed as a parameter as an integer(ie.- '/interactions?interactor_2=116').  \n")
+    
+    def get(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+
 class CuratedInteractorFilter(django_filters.FilterSet):
   
     name = django_filters.CharFilter(method='name_filter', lookup_expr='icontains')
@@ -74,14 +113,13 @@ class CuratedInteractorList(generics.ListAPIView):
 class InteractionFilter(django_filters.FilterSet):
     meta_key = django_filters.CharFilter(method='meta_key_filter', lookup_expr='icontains', label="meta key")
     meta_value = django_filters.CharFilter(method='meta_value_filter', lookup_expr='icontains',label="meta value")
-    interaction_id = django_filters.NumberFilter(field_name='interaction_id')
+    interaction_id = django_filters.NumberFilter(method='interaction_id_filter',field_name='interaction_id')
     source_db = django_filters.CharFilter(method='source_db_filter', field_name='source_db_id')
-    interactor_1 = django_filters.NumberFilter(field_name='interactor_1')
-    interactor_2 = django_filters.NumberFilter(field_name='interactor_2')
-    
+    interactor_id = django_filters.NumberFilter(method='any_interactor_filter', field_name='interactor_id',label="interactor id")
+
     class Meta:
         model = DBtables.Interaction
-        fields = ['interaction_id','interactor_1','interactor_2','source_db','meta_value','meta_key']
+        fields = ['interaction_id','interactor_id','source_db','meta_value','meta_key']
 
     def source_db_filter(self,queryset,source_db_id,value):
         return queryset.filter(source_db__label__icontains=value)
@@ -95,6 +133,12 @@ class InteractionFilter(django_filters.FilterSet):
     def interaction_id_filter(self,queryset,interaction_id,value):
         return queryset.filter(interaction_id=value)
 
+    def any_interactor_filter(self,queryset,name,value):
+        return queryset.filter(
+                Q(interactor_1=value) |
+                Q(interactor_2=value)
+            )
+
 class InteractionList(generics.ListAPIView):
     queryset = DBtables.Interaction.objects.select_related('source_db').select_related('interactor_1').select_related('interactor_2').prefetch_related(
             Prefetch('keyvaluepair_set', queryset=KeyValuePair.objects.select_related('meta_key'))
@@ -102,7 +146,7 @@ class InteractionList(generics.ListAPIView):
     filterset_class = InteractionFilter
     serializer_class = InteractionSerializer
     
-    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15'). \n\n\t\t* ?interactor_1={integer} \n\t\t\tReturns a list of interactions involving a specific interactor_1 identifier passed as a parameter as an integer(ie.- '/interactions?interactor_1=116').  \n\n\t\t* ?interactor_2={integer} \n\t\t\tReturns a list of interactions involving a specific interactor_2 identifier passed as a parameter as an integer(ie.- '/interactions?interactor_2=116').  \n")
+    @swagger_auto_schema(operation_description="* /interactions \n\t\t\tReturns a list of interaction objects annotated with molecular interaction metadata.\n\t\t\tThe 'Try it out' button might return an error if the response is too big but the endpoint will still work if tried on a browser.\n\n\tOne or multiple additional parameters can be passed with the following format:  /interaction?param1={value1}&param2={value2}&param3={value3}\n\n\t\t* ?meta_key={string} \n\t\t\tReturns a list of all interactions having a meta key that case insensitive matches the provided string (ie.- '/interactions?meta_key=experimental evidence').\n\n\t\t* ?meta_value={string} \n\t\t\tReturns a list of all interactions having a meta value, case insensitive matching the provided string (ie.- '/interactions?meta_value=two hybrid).\n\n\t\t* ?interaction_id={integer} \n\t\t\tReturns a list of interactions annotated with key value pairs with the provided integer interaction identifier(ie.- '/interactions?interaction_id=15'). \n\n\t\t* ?interactor_id={integer} \n\t\t\t Returns a list of interactions involving a specific interactor identifier passed as an integer parameter (ie.- '/interactions?interactor_id=116').\n")
     
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -411,6 +455,23 @@ def interactions_by_prodname(request):
                 species_gene_dict[prod_name] = [eg.ensembl_stable_id]
     json_species_genes = json.dumps(species_gene_dict)
     return HttpResponse(json_species_genes)
+
+
+@swagger_auto_schema(method='get',operation_description="Returns all molecular interactions (listed by their identifier) involving an interactor (on either side of the interaction) identified by the integer as a parameter (ie.- '116' will return interactions having the protein Q44643 as either interactor_1 or interactor_2).")
+@api_view(['GET'])
+def interactions_by_interactor_id(request, interactor_id):
+    keyval_query_set = DBtables.KeyValuePair.objects.select_related('interaction__interactor_1','interaction__interactor_2','interaction__source_db').filter(Q (interaction__interactor_1=interactor_id)|Q(interaction__interactor_2=interactor_id))
+    interactions_dict = {}
+    for kv in keyval_query_set:
+        interactions_dict[kv.interaction.interaction_id] = {"interaction_id":kv.interaction.interaction_id,
+                                                            "interactor_1":kv.interaction.interactor_1.curies,
+                                                            "interactor_2":kv.interaction.interactor_2.curies,
+                                                            "doi":kv.interaction.doi,
+                                                            "source_db":kv.interaction.source_db.label,
+                                                            }
+    json_interactions = json.dumps(interactions_dict)
+    return HttpResponse(json_interactions)
+
 
 @swagger_auto_schema(method='get',operation_description="Returns all molecular interactions (listed by their identifier) having the string passed as a parameter, contained in their meta_data as a key (ie.- 'disease').\nThe interactions returned will contain keys in their metadata that contain the specified string either in their name or their description. For instance, a search for 'disease' will match the meta_key name 'Disease name' but also the meta_key name 'Interaction phenotype' since its corresponding description 'Interaction phenotype/disease outcome' matches the query")
 @api_view(['GET'])

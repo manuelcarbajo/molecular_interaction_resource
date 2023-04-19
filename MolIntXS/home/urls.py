@@ -27,6 +27,7 @@ urlpatterns = [
     path('meta_keys', views.meta_keys, name='meta_keys'),
 
     path('interaction', views.InteractionList.as_view(), name='interactionList'),
+    path('interaction/interactor_id/<int:interactor_id>', views.interactions_by_interactor_id, name='interactions_by_any_interactor'),
     path('interaction/meta_key/<str:meta_key>', views.interactions_by_meta_key, name='interactions_by_meta_key'),
     path('interaction/meta_value/<str:meta_value>', views.interactions_by_meta_value, name='interactions_by_meta_value'),
     path('interaction/meta_key/<str:meta_key>/meta_value/<str:meta_value>', views.interactions_by_meta_key_meta_value, name='interactions_by_meta_key_meta_value'),
@@ -38,7 +39,7 @@ urlpatterns = [
     
     path('source_dbs', views.source_dbs, name='source_dbs'),
     
-    path('ensembl_gene', views.ensembl_gene, name='ensembl_gene'),
+    path('ensembl_gene', views.EnsemblGeneList.as_view(), name='ensembl_geneList'),
     path('ensembl_gene/ensembl_name', views.ensembl_gene_by_prodname, name='ens_genes_by_prodname'),
     path('ensembl_gene/ensembl_name/<str:species_production_name>', views.ensembl_gene_by_specific_prodname, name='ensembl_gene_by_specific_prodname'),
     path('ensembl_gene/scientific_name/<str:species_scientific_name>', views.ensembl_gene_by_specific_scientific_name, name='ensembl_gene_by_specific_scientific_name'),

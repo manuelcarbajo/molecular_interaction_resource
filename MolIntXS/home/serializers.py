@@ -44,10 +44,10 @@ class SpeciesSerializer(serializers.Serializer):
 
 
 class EnsemblGeneSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+    ensembl_gene_id = serializers.IntegerField(read_only=True)
     species_id = serializers.IntegerField(read_only=True)
     ensembl_stable_id = serializers.CharField(style={'base_template': 'textarea.html'})
-    import_timestamp = serializers.DateTimeField()
+    scientific_name = serializers.CharField(allow_null=True, source='species.scientific_name')
 
     class Meta:
         model = DBtables.EnsemblGene
