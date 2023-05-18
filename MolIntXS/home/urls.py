@@ -23,33 +23,34 @@ urlpatterns = [
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 
+    path('meta_data',views.KeyValuePairList.as_view(),name='metadataList'),
     path('meta_values', views.meta_values, name='meta_values'),
     path('meta_keys', views.meta_keys, name='meta_keys'),
 
     path('interaction', views.InteractionList.as_view(), name='interactionList'),
-    path('interaction/interactor_id/<int:interactor_id>', views.interactions_by_interactor_id, name='interactions_by_any_interactor'),
-    path('interaction/meta_key/<str:meta_key>', views.interactions_by_meta_key, name='interactions_by_meta_key'),
-    path('interaction/meta_value/<str:meta_value>', views.interactions_by_meta_value, name='interactions_by_meta_value'),
-    path('interaction/meta_key/<str:meta_key>/meta_value/<str:meta_value>', views.interactions_by_meta_key_meta_value, name='interactions_by_meta_key_meta_value'),
+    #path('interaction/interactor_id/<int:interactor_id>', views.interactions_by_interactor_id, name='interactions_by_any_interactor'),
+    #path('interaction/meta_key/<str:meta_key>', views.interactions_by_meta_key, name='interactions_by_meta_key'),
+    #path('interaction/meta_value/<str:meta_value>', views.interactions_by_meta_value, name='interactions_by_meta_value'),
+    #path('interaction/meta_key/<str:meta_key>/meta_value/<str:meta_value>', views.interactions_by_meta_key_meta_value, name='interactions_by_meta_key_meta_value'),
     
     path('species', views.SpeciesList.as_view(), name='speciesList'),
-    path('species/species_id/<int:species_id>', views.species_id, name='species_id'),
-    path('species/ensembl_name/<str:species_production_name>', views.species_by_ensembl_name, name='species_by_ensembl_name'),
-    path('species/scientific_name/<str:species_scientific_name>', views.species_by_scientific_name, name='species_by_scientific_name'),
+    #path('species/species_id/<int:species_id>', views.species_id, name='species_id'),
+    #path('species/ensembl_name/<str:species_production_name>', views.species_by_ensembl_name, name='species_by_ensembl_name'),
+    #path('species/scientific_name/<str:species_scientific_name>', views.species_by_scientific_name, name='species_by_scientific_name'),
     
     path('source_dbs', views.source_dbs, name='source_dbs'),
     
     path('ensembl_gene', views.EnsemblGeneList.as_view(), name='ensembl_geneList'),
     path('ensembl_gene/ensembl_name', views.ensembl_gene_by_prodname, name='ens_genes_by_prodname'),
-    path('ensembl_gene/ensembl_name/<str:species_production_name>', views.ensembl_gene_by_specific_prodname, name='ensembl_gene_by_specific_prodname'),
-    path('ensembl_gene/scientific_name/<str:species_scientific_name>', views.ensembl_gene_by_specific_scientific_name, name='ensembl_gene_by_specific_scientific_name'),
+    #path('ensembl_gene/ensembl_name/<str:species_production_name>', views.ensembl_gene_by_specific_prodname, name='ensembl_gene_by_specific_prodname'),
+    #path('ensembl_gene/scientific_name/<str:species_scientific_name>', views.ensembl_gene_by_specific_scientific_name, name='ensembl_gene_by_specific_scientific_name'),
     
     path('interactor', views.CuratedInteractorList.as_view(), name='interactorList'),
-    path('interactor/name/<str:interactor_name>', views.interactor_name, name='interactorList'),
-    path('interactor/ensembl_gene/<str:ensembl_gene>', views.interactor_ensembl_gene, name='interactor_ensembl_gene'),
-    path('interactor/production_name/<str:production_name>', views.interactor_by_specific_prodname, name='interactors_by_prod_name'),
-    path('interactor/scientific_name/<str:scientific_name>', views.interactor_by_scientific_name, name='interactors_by_scientific_name'),
-    path('interactor/interactor_id/<int:curated_interactor_id>', views.interactor_id, name='interactor_id'),
+    #path('interactor/name/<str:interactor_name>', views.interactor_name, name='interactorList'),
+    #path('interactor/ensembl_gene/<str:ensembl_gene>', views.interactor_ensembl_gene, name='interactor_ensembl_gene'),
+    #path('interactor/production_name/<str:production_name>', views.interactor_by_specific_prodname, name='interactors_by_prod_name'),
+    #path('interactor/scientific_name/<str:scientific_name>', views.interactor_by_scientific_name, name='interactors_by_scientific_name'),
+    #path('interactor/interactor_id/<int:curated_interactor_id>', views.interactor_id, name='interactor_id'),
 
     #USED BY WEB!
     path('interactor/ensembl_name', views.interactors_by_prodname, name='interactors_by_prodname'),
