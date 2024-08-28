@@ -786,6 +786,8 @@ def get_source_db_link(identifier, source_db):
     url = ''
     if source_db == "PHI-base":
         url = "http://www.phi-base.org/searchFacet.htm?queryTerm=" + clean_identifier(identifier)
+    elif source_db == "PHI-base5.0":
+        url = "https://phi5.phi-base.org/#/search-list-page?keyword=" + clean_identifier(identifier) + "&start=0"
     elif source_db == "PlasticDB":
         url = "https://plasticdb.org/proteins"
     elif "HPIDB" in source_db:
